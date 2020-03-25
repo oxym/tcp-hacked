@@ -75,7 +75,7 @@ int main(int argc, char *argv[])
     
 
     // Open raw socket without protocol header
-    if ((sockfd = socket(AF_INET, SOCK RAW, IPPROTO RAW)) < 0) {
+    if ((sockfd = socket(AF_INET, SOCK_RAW, IPPROTO_RAW)) < 0) {
         perror("fakesync: socket");
         exit(-1);
     }
@@ -123,8 +123,8 @@ int main(int argc, char *argv[])
     tcph -> ack_seq = 0x0; //32 bit ack sequence number, depends whether ACK is set or not
     tcph -> doff = 5; //4 bits: 5 x 32-bit words on tcp header
     tcph -> res1 = 0; //4 bits: Not used
-    tcph -> cwr = 0; //Congestion control mechanism
-    tcph -> ece = 0; //Congestion control mechanism
+    // tcph -> cwr = 0; //Congestion control mechanism
+    // tcph -> ece = 0; //Congestion control mechanism
     tcph -> urg = 0; //Urgent flag
     tcph -> ack = 0; //Acknownledge
     tcph -> psh = 0; //Push data immediately
@@ -143,9 +143,9 @@ int main(int argc, char *argv[])
     // pack pseudo header
     inet_pton(AF_INET, srcIP, &(psh -> src_addr)); // 32 bit source address
     inet_pton(AF_INET, svrIP, &(psh -> dst_addr)); // 32 bit destination address
-    psh.reserved = 0;
-    psh.protocol = IPPROTO_TCP; // TCP
-    psh.tcp_len = htons(tcp_len); // TCP segment length
+    psh -> reserved = 0;
+    psh -> protocol = IPPROTO_TCP; // TCP
+    psh -> tcp_len = htons(tcp_len); // TCP segment length
 
     tcph -> check = ip_checksum(pseudo_ptr, sizeof(struct pshdr) + tcp_len);
 
