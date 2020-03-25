@@ -1,4 +1,6 @@
 #include <stdio.h>
+#include <stdlib.h>
+#include <errno.h>
 #include <string.h>
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -73,8 +75,8 @@ int main(int argc, char *argv[])
     
 
     // Open raw socket without protocol header
-    if ((sockfd = socket(AF INET, SOCK RAW, IPPROTO RAW)) < 0) {
-        perro("fakesync: socket");
+    if ((sockfd = socket(AF_INET, SOCK RAW, IPPROTO RAW)) < 0) {
+        perror("fakesync: socket");
         exit(-1);
     }
 
