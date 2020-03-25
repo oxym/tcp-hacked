@@ -149,12 +149,12 @@ int main(int argc, char *argv[])
 
     if ((n = sendto(sockfd, datagram, iph -> tot_len, 0, (struct sockaddr *) &sa, sizeof sa)) < 0)
     {
-        perror("fakesync: sendto()")
+        perror("fakesync: sendto()");
     }
     else
     {
-        printf("sent %d bytes.\n", n)
+        printf("sent %d bytes.\n", n);
     }
 
-    return 0
+    return 0;
 }
