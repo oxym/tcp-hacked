@@ -92,8 +92,8 @@ int main(int argc, char *argv[])
     // carve out IP header and TCP header
     memset(datagram, 0, sizeof datagram);
     iph = (struct iphdr *) datagram;
-    tcph = (struct tcphdr *) (iph + sizeof iph);
-    data = (char *) (tcph + sizeof tcph);
+    tcph = (struct tcphdr *) (iph + sizeof(struct iphdr));
+    data = (char *) (tcph + sizeof(struct tcphdr));
     strcpy(data, PAYLOAD);
 
     tcp_len = sizeof(struct tcphdr) + strlen(data);
@@ -102,7 +102,7 @@ int main(int argc, char *argv[])
     iph -> version = 4; // IPv4
     iph -> ihl = 5; // 5 * 32 bits
     iph -> tos = 0; // DSCP: default; ECN: Not ECN-capable transport
-    iph -> tot_len = htons(sizeof iph + tcp_len); // total length
+    iph -> tot_len = htons(sizeof(struct iphdr) + tcp_len); // total length
     iph -> id = htons(id0); // start ID
     iph -> frag_off = 0x00;
     iph -> ttl = 64; // time to live
@@ -112,7 +112,7 @@ int main(int argc, char *argv[])
     inet_pton(AF_INET, svrIP, &(iph -> daddr));
 
     // calculate IP check sum
-    iph -> check = ip_checksum((void *) datagram, sizeof iph + tcp_len);
+    iph -> check = ip_checksum((void *) datagram, sizeof(struct iphdr) + tcp_len);
     
     // pack TCP header
     tcph -> source = htons(srcPort); //16 bit in nbp format of source port
@@ -136,7 +136,7 @@ int main(int argc, char *argv[])
     // construct psudo packet
     memset(pseudo_packet, 0, sizeof pseudo_packet);
     psh = (struct pshdr *) pseudo_packet;
-    memcpy(pseudo_ptr + sizeof psh, tcph, tcp_len);
+    memcpy(pseudo_ptr + sizeof(struct pshdr), tcph, tcp_len);
 
     // pack pseudo header
     inet_pton(AF_INET, srcIP, &(psh -> src_addr)); // 32 bit source address
