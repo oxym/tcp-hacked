@@ -57,7 +57,7 @@ struct pshdr {
 int main(int argc, char *argv[])
 {
     int sockfd, n, yes = 1;
-    char datagram[DATAGRAMSIZE], pseudo_packet[PSEUDOPACKETSIZE];
+    char datagram[DATAGRAMSIZE], pseudo_packet[PSEUDOPACKETSIZE], ipstr[INET_ADDRSTRLEN];;
     void *pseudo_ptr = &pseudo_packet;
     struct iphdr *iph;
     struct tcphdr *tcph;
@@ -110,6 +110,11 @@ int main(int argc, char *argv[])
     iph -> check = 0;
     inet_pton(AF_INET, srcIP, &(iph -> saddr));
     inet_pton(AF_INET, svrIP, &(iph -> daddr));
+    inet_ntop(AF_INET, &(iph -> saddr), ipstr, INET_ADDRSTRLEN);
+    printf("ip: source: %s\n", ipstr);
+    inet_ntop(AF_INET, &(iph -> daddr), ipstr, INET_ADDRSTRLEN);
+    printf("ip: destination: %s\n", ipstr);
+
 
     // calculate IP check sum
     iph -> check = ip_checksum((void *) datagram, sizeof(struct iphdr) + tcp_len);
@@ -141,6 +146,11 @@ int main(int argc, char *argv[])
     // pack pseudo header
     inet_pton(AF_INET, srcIP, &(psh -> src_addr)); // 32 bit source address
     inet_pton(AF_INET, svrIP, &(psh -> dst_addr)); // 32 bit destination address
+    inet_ntop(AF_INET, &(psh -> src_addr), ipstr, INET_ADDRSTRLEN);
+    printf("pseudo: source: %s\n", ipstr);
+    inet_ntop(AF_INET, &(psh -> dst_addr), ipstr, INET_ADDRSTRLEN);
+    printf("pseudo: destination: %s\n", ipstr);
+    
     psh -> reserved = 0;
     psh -> protocol = IPPROTO_TCP; // TCP
     psh -> tcp_len = htons(tcp_len); // TCP segment length
