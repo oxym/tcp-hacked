@@ -150,14 +150,14 @@ int main(int argc, char *argv[])
     printf("pseudo: source: %s\n", ipstr);
     inet_ntop(AF_INET, &(psh -> dst_addr), ipstr, INET_ADDRSTRLEN);
     printf("pseudo: destination: %s\n", ipstr);
-    
+
     psh -> reserved = 0;
     psh -> protocol = IPPROTO_TCP; // TCP
     psh -> tcp_len = htons(tcp_len); // TCP segment length
 
     tcph -> check = ip_checksum(pseudo_ptr, sizeof(struct pshdr) + tcp_len);
 
-    if ((n = sendto(sockfd, datagram, iph -> tot_len, 0, (struct sockaddr *) &sa, sizeof sa)) < 0)
+    if ((n = sendto(sockfd, datagram, sizeof(struct iphdr) + tcp_len, 0, (struct sockaddr *) &sa, sizeof sa)) < 0)
     {
         perror("fakesync: sendto()");
     }
