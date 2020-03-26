@@ -114,7 +114,7 @@ int main(int argc, char *argv[])
     inet_pton(AF_INET, svrIP, &(iph -> daddr));
 
     // calculate IP check sum
-    iph -> check = ip_checksum((void *) datagram, iph -> tot_len);
+    iph -> check = ip_checksum((void *) datagram, sizeof iph + tcp_len);
     
     // pack TCP header
     tcph -> source = htons(srcPort); //16 bit in nbp format of source port
