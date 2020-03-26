@@ -64,10 +64,10 @@ int main(int argc, char *argv[])
     struct pshdr *psh;
     char *srcIP = "10.0.2.15";
     char *svrIP = "172.19.3.82";
-    uint16_t srcPort = 30000;
+    uint16_t srcPort = 35801;
     uint16_t svrPort = 35801;
-    uint32_t seq0 = 3771717783;
-    uint16_t id0 = 42228;
+    uint32_t seq0 = 2220844409;
+    uint16_t id0 = 39326;
     size_t tcp_len;
     void *data;
     struct sockaddr_in sa;
@@ -87,7 +87,7 @@ int main(int argc, char *argv[])
     // build sockaddr
     sa.sin_family = AF_INET;
     sa.sin_port = htons(svrPort);
-    inet_pton(AF_INET, svrIP, &(sa.sin_addr));
+    inet_pton(AF_INET, svrIP, &(sa.sin_addr.s_addr));
 
     // carve out IP header and TCP header
     memset(datagram, 0, sizeof datagram);
@@ -103,6 +103,7 @@ int main(int argc, char *argv[])
     iph -> ihl = 5; // 5 * 32 bits
     iph -> tos = 0; // DSCP: default; ECN: Not ECN-capable transport
     iph -> tot_len = htons(sizeof(struct iphdr) + tcp_len); // total length
+    printf("ip: tot_len: %d\n", sizeof(struct iphdr) + tcp_len);
     iph -> id = htons(id0); // start ID
     iph -> frag_off = 0x00;
     iph -> ttl = 64; // time to live
