@@ -56,7 +56,7 @@ struct pshdr {
 
 int main(int argc, char *argv[])
 {
-    int sockfd, n, yes = 0;
+    int sockfd, n, yes = 1;
     char datagram[DATAGRAMSIZE], pseudo_packet[PSEUDOPACKETSIZE];
     void *pseudo_ptr = &pseudo_packet;
     struct iphdr *iph;
@@ -71,8 +71,6 @@ int main(int argc, char *argv[])
     size_t tcp_len;
     void *data;
     struct sockaddr_in sa;
-    
-    
 
     // Open raw socket without protocol header
     if ((sockfd = socket(AF_INET, SOCK_RAW, IPPROTO_RAW)) < 0) {
