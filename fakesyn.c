@@ -57,8 +57,7 @@ struct pshdr {
 int main(int argc, char *argv[])
 {
     int sockfd, n, yes = 1;
-    char datagram[DATAGRAMSIZE], pseudo_packet[PSEUDOPACKETSIZE], ipstr[INET_ADDRSTRLEN];;
-    char *pseudo_ptr = &pseudo_packet;
+    char datagram[DATAGRAMSIZE], pseudo_packet[PSEUDOPACKETSIZE], ipstr[INET_ADDRSTRLEN];
     struct iphdr *iph;
     struct tcphdr *tcph;
     struct pshdr *psh;
@@ -144,7 +143,7 @@ int main(int argc, char *argv[])
     // construct psudo packet
     memset(pseudo_packet, 0, sizeof pseudo_packet);
     psh = (struct pshdr *) pseudo_packet;
-    memcpy(pseudo_ptr + sizeof(struct pshdr), (char *)tcph, tcp_len);
+    memcpy(pseudo_packet + sizeof(struct pshdr), (char *)tcph, tcp_len);
 
     // pack pseudo header
     inet_pton(AF_INET, srcIP, &(psh -> src_addr)); // 32 bit source address
@@ -158,7 +157,7 @@ int main(int argc, char *argv[])
     psh -> protocol = IPPROTO_TCP; // TCP
     psh -> tcp_len = htons(tcp_len); // TCP segment length
 
-    tcph -> check = ip_checksum(pseudo_ptr, sizeof(struct pshdr) + tcp_len);
+    tcph -> check = ip_checksum(pseudo_packet, sizeof(struct pshdr) + tcp_len);
 
     if ((n = sendto(sockfd, datagram, sizeof(struct iphdr) + tcp_len, 0, (struct sockaddr *) &sa, sizeof sa)) < 0)
     {
