@@ -68,6 +68,7 @@ int main(int argc, char *argv[])
     uint16_t svrPort = 35801;
     uint32_t seq0 = 2220844409;
     uint16_t id0 = 39326;
+    uint16_t window_size = 29200;
     size_t tcp_len;
     void *data;
     struct sockaddr_in sa;
@@ -125,8 +126,9 @@ int main(int argc, char *argv[])
     tcph -> dest = htons(svrPort); //16 bit in nbp format of destination port
     tcph -> seq = htonl(seq0++); //32 bit sequence number, initially set to zero
     tcph -> ack_seq = 0x0; //32 bit ack sequence number, depends whether ACK is set or not
-    tcph -> doff = 5; //4 bits: 5 x 32-bit words on tcp header
     tcph -> res1 = 0; //4 bits: Not used
+    tcph -> res2 = 0; //4 bits: Not used
+    tcph -> doff = 5; //4 bits: 5 x 32-bit words on tcp header
     // tcph -> cwr = 0; //Congestion control mechanism
     // tcph -> ece = 0; //Congestion control mechanism
     tcph -> urg = 0; //Urgent flag
@@ -135,7 +137,7 @@ int main(int argc, char *argv[])
     tcph -> rst = 0; //RST flag
     tcph -> syn = 1; //SYN flag
     tcph -> fin = 0; //Terminates the connection
-    tcph -> window = htons(155);//0xFFFF; //16 bit max number of databytes
+    tcph -> window = htons(window_size);//0xFFFF; //16 bit max number of databytes
     tcph -> check = 0; //16 bit check sum. Can't calculate at this point
     tcph -> urg_ptr = 0; //16 bit indicate the urgent data. Only if URG flag is set
     
