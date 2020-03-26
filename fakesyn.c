@@ -58,7 +58,7 @@ int main(int argc, char *argv[])
 {
     int sockfd, n, yes = 1;
     char datagram[DATAGRAMSIZE], pseudo_packet[PSEUDOPACKETSIZE], ipstr[INET_ADDRSTRLEN];;
-    void *pseudo_ptr = &pseudo_packet;
+    char *pseudo_ptr = &pseudo_packet;
     struct iphdr *iph;
     struct tcphdr *tcph;
     struct pshdr *psh;
@@ -144,7 +144,7 @@ int main(int argc, char *argv[])
     // construct psudo packet
     memset(pseudo_packet, 0, sizeof pseudo_packet);
     psh = (struct pshdr *) pseudo_packet;
-    memcpy(pseudo_ptr + sizeof(struct pshdr), tcph, tcp_len);
+    memcpy(pseudo_ptr + sizeof(struct pshdr), (char *)tcph, tcp_len);
 
     // pack pseudo header
     inet_pton(AF_INET, srcIP, &(psh -> src_addr)); // 32 bit source address
