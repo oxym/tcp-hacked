@@ -92,8 +92,8 @@ int main(int argc, char *argv[])
     // carve out IP header and TCP header
     memset(datagram, 0, sizeof datagram);
     iph = (struct iphdr *) datagram;
-    tcph = (struct tcphdr *) (iph + sizeof(struct iphdr));
-    data = (char *) (tcph + sizeof(struct tcphdr));
+    tcph = (struct tcphdr *) (iph + 1);
+    data = (char *) (tcph + 1);
     strcpy(data, PAYLOAD);
 
     tcp_len = sizeof(struct tcphdr) + strlen(data);
@@ -143,7 +143,7 @@ int main(int argc, char *argv[])
     // construct psudo packet
     memset(pseudo_packet, 0, sizeof pseudo_packet);
     psh = (struct pshdr *) pseudo_packet;
-    memcpy(pseudo_packet + sizeof(struct pshdr), (char *)tcph, tcp_len);
+    memcpy(psh + 1, (char *)tcph, tcp_len);
 
     // pack pseudo header
     inet_pton(AF_INET, srcIP, &(psh -> src_addr)); // 32 bit source address
