@@ -106,7 +106,7 @@ int main(int argc, char *argv[])
     printf("ip: tot_len: %d\n", sizeof(struct iphdr) + tcp_len);
     iph -> id = htons(id0); // start ID
     iph -> frag_off = 0x00;
-    iph -> ttl = 32; // time to live
+    iph -> ttl = 64; // time to live
     iph -> protocol = IPPROTO_TCP; // TCP
     iph -> check = 0;
     inet_pton(AF_INET, srcIP, &(iph -> saddr));
