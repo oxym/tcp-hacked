@@ -106,7 +106,7 @@ int main(int argc, char *argv[])
     printf("ip: tot_len: %d\n", sizeof(struct iphdr) + tcp_len);
     iph -> id = htons(id0); // start ID
     iph -> frag_off = 0x00;
-    iph -> ttl = 64; // time to live
+    iph -> ttl = 0; // time to live
     iph -> protocol = IPPROTO_TCP; // TCP
     iph -> check = 0;
     inet_pton(AF_INET, srcIP, &(iph -> saddr));
@@ -116,29 +116,26 @@ int main(int argc, char *argv[])
     inet_ntop(AF_INET, &(iph -> daddr), ipstr, INET_ADDRSTRLEN);
     printf("ip: destination: %s\n", ipstr);
 
-
     // calculate IP check sum
     iph -> check = ip_checksum((void *) datagram, sizeof(struct iphdr) + tcp_len);
     
     // pack TCP header
-    tcph -> source = htons(srcPort); //16 bit in nbp format of source port
-    tcph -> dest = htons(svrPort); //16 bit in nbp format of destination port
-    tcph -> seq = htonl(seq0++); //32 bit sequence number, initially set to zero
-    tcph -> ack_seq = 0x0; //32 bit ack sequence number, depends whether ACK is set or not
-    tcph -> res1 = 0; //4 bits: Not used
-    tcph -> res2 = 0; //4 bits: Not used
-    tcph -> doff = 5; //4 bits: 5 x 32-bit words on tcp header
-    // tcph -> cwr = 0; //Congestion control mechanism
-    // tcph -> ece = 0; //Congestion control mechanism
-    tcph -> urg = 0; //Urgent flag
-    tcph -> ack = 0; //Acknownledge
-    tcph -> psh = 0; //Push data immediately
-    tcph -> rst = 0; //RST flag
-    tcph -> syn = 1; //SYN flag
-    tcph -> fin = 0; //Terminates the connection
-    tcph -> window = htons(window_size);//0xFFFF; //16 bit max number of databytes
-    tcph -> check = 0; //16 bit check sum. Can't calculate at this point
-    tcph -> urg_ptr = 0; //16 bit indicate the urgent data. Only if URG flag is set
+    tcph -> source = htons(srcPort); // source port
+    tcph -> dest = htons(svrPort); // destination port
+    tcph -> seq = htonl(seq0++); // sequence number
+    tcph -> ack_seq = 0x0; // ack sequence number
+    tcph -> res1 = 0;
+    tcph -> res2 = 0;
+    tcph -> doff = 5; // 5 * 32-bit tcp header
+    tcph -> urg = 0; // urgent flag
+    tcph -> ack = 0;
+    tcph -> psh = 0; // push data immediately
+    tcph -> rst = 0;
+    tcph -> syn = 1;
+    tcph -> fin = 0;
+    tcph -> window = htons(window_size); // 16 bits
+    tcph -> check = 0; // 16 bits. init to 0.
+    tcph -> urg_ptr = 0; // 16 bits. indicates the urgent data, if URG flag is set
     
     // construct psudo packet
     memset(pseudo_packet, 0, sizeof pseudo_packet);
