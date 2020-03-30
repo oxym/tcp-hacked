@@ -43,10 +43,17 @@ void *get_in_addr(struct sockaddr *sa)
 	return &(((struct sockaddr_in6*)sa)->sin6_addr);
 }
 
+void write_log(FILE *f, const char *s)
+{
+    time_t now = time(NULL);
+    char ts[100];
+    strftime(ts, sizeof ts, "%F %H:%M:%S %Z", localtime(&now));
+    fprintf(f, "%s %s\n", ts, s);
+
+}
 
 int main(void)
 {
-    time_t now;
     FILE *logfile;
 	int sockfd, new_fd;  // listen on sock_fd, new connection on new_fd
 	struct addrinfo hints, *servinfo, *p;
@@ -54,7 +61,7 @@ int main(void)
 	socklen_t sin_size;
 	struct sigaction sa;
 	int yes=1;
-	char s[INET6_ADDRSTRLEN], ts[100];
+	char s[INET6_ADDRSTRLEN];
 	int rv;
 
     logfile=fopen("log.txt","w+");
@@ -112,9 +119,7 @@ int main(void)
 		exit(1);
 	}
 
-    now = time(NULL);
-    strftime(ts, sizeof ts, "%F %H:%M:%S %Z", localtime(&now));
-	fprintf(logfile, "%s server: waiting for connections...\n", ts);
+	write_log(logfile, "server: waiting for connections...");
     fflush(logfile);
 
 	while(1) {  // main accept() loop
@@ -130,16 +135,14 @@ int main(void)
 		inet_ntop(their_addr.ss_family,
 			get_in_addr((struct sockaddr *)&their_addr),
 			s, sizeof s);
+
 		fprintf(logfile, "server: got connection from %s\n", s);
         fflush(logfile);
         
 		if (!fork()) { // this is the child process
 			close(sockfd); // child doesn't need the listener
 
-            now = time(NULL);
-            strftime(ts, sizeof ts, "%F %H:%M:%S %Z", localtime(&now));
-
-            fprintf(logfile, "%s start sleeping before send ...\n", ts);
+            write_log(logfile, "start sleeping before send ...");
             fflush(logfile);
             sleep(10); // sleep for 10 secs
 
