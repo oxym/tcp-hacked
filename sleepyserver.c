@@ -113,7 +113,7 @@ int main(void)
 	}
 
     now = time(NULL);
-    strftime(ts, sizeof ts, '%F %H:%M:%S %Z', localtime(&now));
+    strftime(ts, sizeof ts, "%F %H:%M:%S %Z", localtime(&now));
     
 	fprintf(logfile, "%s server: waiting for connections...\n", ts);
 
@@ -136,7 +136,7 @@ int main(void)
 			close(sockfd); // child doesn't need the listener
 
             now = time(NULL);
-            strftime(ts, sizeof ts, '%F %H:%M:%S %Z', localtime(&now));
+            strftime(ts, sizeof ts, "%F %H:%M:%S %Z", localtime(&now));
 
             fprintf(logfile, "%s start sleeping ...\n", ts);
             sleep(5); // sleep for 5 secs
