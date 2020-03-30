@@ -114,7 +114,6 @@ int main(void)
 
     now = time(NULL);
     strftime(ts, sizeof ts, "%F %H:%M:%S %Z", localtime(&now));
-    
 	fprintf(logfile, "%s server: waiting for connections...\n", ts);
 
 	while(1) {  // main accept() loop
@@ -141,7 +140,12 @@ int main(void)
             fprintf(logfile, "%s start sleeping ...\n", ts);
             sleep(5); // sleep for 5 secs
 
-			if (send(new_fd, "Hello, world!", 13, 0) == -1) perror("send");
+			if (send(new_fd, "Hello, world!", 13, 0) == -1) 
+            {
+                perror("send()");
+            }
+
+            fclose(logfile);
 			close(new_fd);
 			exit(0);
 		}
