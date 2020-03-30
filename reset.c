@@ -62,7 +62,7 @@ int main(int argc, char *argv[])
     struct tcphdr *tcph, *cstcph;
     struct pshdr *psh;
     char *srcIP = "172.19.3.82";
-    char *svrIP = "10.0.2.15";
+    char *dstIP = "10.0.2.15";
     uint16_t srcPort = 35801;
     uint16_t svrPort = 35801;
     uint32_t seq0 = 3968001;
@@ -87,7 +87,7 @@ int main(int argc, char *argv[])
     // build sockaddr
     sa.sin_family = AF_INET;
     sa.sin_port = htons(svrPort);
-    inet_pton(AF_INET, svrIP, &(sa.sin_addr.s_addr));
+    inet_pton(AF_INET, dstIP, &(sa.sin_addr.s_addr));
 
     // carve out IP header and TCP header
     memset(datagram, 0, sizeof datagram);
@@ -109,7 +109,7 @@ int main(int argc, char *argv[])
     iph -> protocol = IPPROTO_TCP; // TCP
     iph -> check = 0;
     inet_pton(AF_INET, srcIP, &(iph -> saddr));
-    inet_pton(AF_INET, svrIP, &(iph -> daddr));
+    inet_pton(AF_INET, dstIP, &(iph -> daddr));
     // inet_ntop(AF_INET, &(iph -> saddr), ipstr, INET_ADDRSTRLEN);
     // printf("ip: source: %s\n", ipstr);
     // inet_ntop(AF_INET, &(iph -> daddr), ipstr, INET_ADDRSTRLEN);
@@ -144,7 +144,7 @@ int main(int argc, char *argv[])
 
     // pack pseudo header
     inet_pton(AF_INET, srcIP, &(psh -> src_addr)); // 32 bit source address
-    inet_pton(AF_INET, svrIP, &(psh -> dst_addr)); // 32 bit destination address
+    inet_pton(AF_INET, dstIP, &(psh -> dst_addr)); // 32 bit destination address
     psh -> reserved = 0;
     psh -> protocol = IPPROTO_TCP; // TCP
     psh -> tcp_len = htons(tcp_len); // TCP segment length
