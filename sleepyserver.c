@@ -65,7 +65,7 @@ int main(void)
 	hints.ai_flags = AI_PASSIVE; // use my IP
 
 	if ((rv = getaddrinfo(NULL, PORT, &hints, &servinfo)) != 0) {
-		fprintf(logfile, "getaddrinfo: %s\n", gai_strerror(rv));
+		fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(rv));
 		return 1;
 	}
 
@@ -95,7 +95,7 @@ int main(void)
 	freeaddrinfo(servinfo); // all done with this structure
 
 	if (p == NULL)  {
-		fprintf(logfile, "server: failed to bind\n");
+		fprintf(stderr, "server: failed to bind\n");
 		exit(1);
 	}
 
@@ -115,6 +115,7 @@ int main(void)
     now = time(NULL);
     strftime(ts, sizeof ts, "%F %H:%M:%S %Z", localtime(&now));
 	fprintf(logfile, "%s server: waiting for connections...\n", ts);
+    fflush(logfile);
 
 	while(1) {  // main accept() loop
 
@@ -130,6 +131,7 @@ int main(void)
 			get_in_addr((struct sockaddr *)&their_addr),
 			s, sizeof s);
 		fprintf(logfile, "server: got connection from %s\n", s);
+        fflush(logfile);
         
 		if (!fork()) { // this is the child process
 			close(sockfd); // child doesn't need the listener
@@ -138,6 +140,7 @@ int main(void)
             strftime(ts, sizeof ts, "%F %H:%M:%S %Z", localtime(&now));
 
             fprintf(logfile, "%s start sleeping before send ...\n", ts);
+            fflush(logfile);
             sleep(10); // sleep for 10 secs
 
 			if (send(new_fd, "Hello, world!", 13, 0) == -1) 
