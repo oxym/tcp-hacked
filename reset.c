@@ -160,6 +160,7 @@ int main(int argc, char *argv[])
             perror("fakesync: sendto()");
         }
 
+        printf("rst sent")
         break; // remove to kick out inf loop
     }
 
