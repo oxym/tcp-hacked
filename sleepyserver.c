@@ -114,11 +114,9 @@ int main(void)
 
 	while(1) {  // main accept() loop
 
-        fprintf(logfile, "start sleeping ...\n");
-        sleep(5); // sleep for 5 secs
-
 		sin_size = sizeof their_addr;
 		new_fd = accept(sockfd, (struct sockaddr *)&their_addr, &sin_size);
+
 		if (new_fd == -1) {
 			perror("accept");
 			continue;
@@ -132,8 +130,10 @@ int main(void)
 		if (!fork()) { // this is the child process
 			close(sockfd); // child doesn't need the listener
 
-			if (send(new_fd, "Hello, world!", 13, 0) == -1)
-				perror("send");
+            fprintf(logfile, "start sleeping ...\n");
+            sleep(5); // sleep for 5 secs
+
+			if (send(new_fd, "Hello, world!", 13, 0) == -1) perror("send");
 			close(new_fd);
 			exit(0);
 		}
