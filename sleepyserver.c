@@ -114,7 +114,7 @@ int main(void)
 
 	while(1) {  // main accept() loop
 
-        fprintf(logfile, "start sleeping ...");
+        fprintf(logfile, "start sleeping ...\n");
         sleep(5); // sleep for 5 secs
 
 		sin_size = sizeof their_addr;
