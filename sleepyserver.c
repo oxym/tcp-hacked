@@ -45,6 +45,7 @@ void *get_in_addr(struct sockaddr *sa)
 
 int main(void)
 {
+    FILE *logfile;
 	int sockfd, new_fd;  // listen on sock_fd, new connection on new_fd
 	struct addrinfo hints, *servinfo, *p;
 	struct sockaddr_storage their_addr; // connector's address information
@@ -107,11 +108,13 @@ int main(void)
 		exit(1);
 	}
 
-	printf("server: waiting for connections...\n");
+    logfile=fopen("log.txt","w+");
+
+	fprintf(logfile, "server: waiting for connections...\n");
 
 	while(1) {  // main accept() loop
 
-        printf("start sleeping ...");
+        fprintf(logfile, "start sleeping ...");
         sleep(5); // sleep for 5 secs
 
 		sin_size = sizeof their_addr;
@@ -136,6 +139,8 @@ int main(void)
 		}
 		close(new_fd);  // parent doesn't need this
 	}
+
+    fclose(logfile);
 
 	return 0;
 }
