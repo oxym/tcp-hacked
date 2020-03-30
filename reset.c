@@ -66,7 +66,7 @@ int main(int argc, char *argv[])
     uint16_t srcPort = 35801;
     uint16_t svrPort = 35801;
     uint32_t seq0 = 3968001;
-    uint16_t id0 = 39326;
+    uint16_t id0 = 56;
     uint16_t window_size = 29200;
     size_t tcp_len;
     void *data;
