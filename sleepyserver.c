@@ -138,7 +138,7 @@ int main(void)
             strftime(ts, sizeof ts, "%F %H:%M:%S %Z", localtime(&now));
 
             fprintf(logfile, "%s start sleeping before send ...\n", ts);
-            sleep(5); // sleep for 5 secs
+            sleep(10); // sleep for 10 secs
 
 			if (send(new_fd, "Hello, world!", 13, 0) == -1) 
             {

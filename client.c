@@ -30,11 +30,14 @@ void *get_in_addr(struct sockaddr *sa)
 
 int main(int argc, char *argv[])
 {
+	FILE *logfile;
 	int sockfd, numbytes;  
 	char buf[MAXDATASIZE];
 	struct addrinfo hints, *servinfo, *p;
 	int rv;
 	char s[INET6_ADDRSTRLEN];
+
+	logfile=fopen("log.txt","w+");
 
 	if (argc != 2) {
 	    fprintf(stderr,"usage: client hostname\n");
@@ -74,7 +77,7 @@ int main(int argc, char *argv[])
 
 	inet_ntop(p->ai_family, get_in_addr((struct sockaddr *)p->ai_addr),
 			s, sizeof s);
-	printf("client: connecting to %s\n", s);
+	fprintf(logfile, "client: connecting to %s\n", s);
 
 	freeaddrinfo(servinfo); // all done with this structure
 
@@ -85,8 +88,9 @@ int main(int argc, char *argv[])
 
 	buf[numbytes] = '\0';
 
-	printf("client: received '%s'\n",buf);
+	fprintf(logfile, "client: received '%s'\n",buf);
 
+	fclose(logfile);
 	close(sockfd);
 
 	return 0;
