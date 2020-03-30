@@ -14,6 +14,7 @@
 #include <arpa/inet.h>
 #include <sys/wait.h>
 #include <signal.h>
+#include <time.h>
 
 #define PORT "35801"  // the port users will be connecting to
 
@@ -45,6 +46,7 @@ void *get_in_addr(struct sockaddr *sa)
 
 int main(void)
 {
+    time_t now;
     FILE *logfile;
 	int sockfd, new_fd;  // listen on sock_fd, new connection on new_fd
 	struct addrinfo hints, *servinfo, *p;
@@ -52,8 +54,10 @@ int main(void)
 	socklen_t sin_size;
 	struct sigaction sa;
 	int yes=1;
-	char s[INET6_ADDRSTRLEN];
+	char s[INET6_ADDRSTRLEN], ts[100];
 	int rv;
+
+    logfile=fopen("log.txt","w+");
 
 	memset(&hints, 0, sizeof hints);
 	hints.ai_family = AF_UNSPEC;
@@ -61,7 +65,7 @@ int main(void)
 	hints.ai_flags = AI_PASSIVE; // use my IP
 
 	if ((rv = getaddrinfo(NULL, PORT, &hints, &servinfo)) != 0) {
-		fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(rv));
+		fprintf(logfile, "getaddrinfo: %s\n", gai_strerror(rv));
 		return 1;
 	}
 
@@ -91,7 +95,7 @@ int main(void)
 	freeaddrinfo(servinfo); // all done with this structure
 
 	if (p == NULL)  {
-		fprintf(stderr, "server: failed to bind\n");
+		fprintf(logfile, "server: failed to bind\n");
 		exit(1);
 	}
 
@@ -108,9 +112,10 @@ int main(void)
 		exit(1);
 	}
 
-    logfile=fopen("log.txt","w+");
-
-	fprintf(logfile, "server: waiting for connections...\n");
+    now = time(NULL);
+    strftime(ts, sizeof ts, '%F %H:%M:%S %Z', localtime(&now));
+    
+	fprintf(logfile, "%s server: waiting for connections...\n", ts);
 
 	while(1) {  // main accept() loop
 
@@ -125,12 +130,15 @@ int main(void)
 		inet_ntop(their_addr.ss_family,
 			get_in_addr((struct sockaddr *)&their_addr),
 			s, sizeof s);
-		printf("server: got connection from %s\n", s);
+		fprintf(logfile, "server: got connection from %s\n", s);
         
 		if (!fork()) { // this is the child process
 			close(sockfd); // child doesn't need the listener
 
-            fprintf(logfile, "start sleeping ...\n");
+            now = time(NULL);
+            strftime(ts, sizeof ts, '%F %H:%M:%S %Z', localtime(&now));
+
+            fprintf(logfile, "%s start sleeping ...\n", ts);
             sleep(5); // sleep for 5 secs
 
 			if (send(new_fd, "Hello, world!", 13, 0) == -1) perror("send");
