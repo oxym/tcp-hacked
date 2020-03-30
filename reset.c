@@ -61,11 +61,11 @@ int main(int argc, char *argv[])
     struct iphdr *iph;
     struct tcphdr *tcph, *cstcph;
     struct pshdr *psh;
-    char *srcIP = "10.0.2.15";
-    char *svrIP = "172.19.3.82";
+    char *srcIP = "172.19.3.82";
+    char *svrIP = "10.0.2.15";
     uint16_t srcPort = 35801;
     uint16_t svrPort = 35801;
-    uint32_t seq0 = 2220844409;
+    uint32_t seq0 = 3968001;
     uint16_t id0 = 39326;
     uint16_t window_size = 29200;
     size_t tcp_len;
@@ -103,7 +103,6 @@ int main(int argc, char *argv[])
     iph -> ihl = 5; // 5 * 32 bits
     iph -> tos = 0; // DSCP: default; ECN: Not ECN-capable transport
     iph -> tot_len = htons(sizeof(struct iphdr) + tcp_len); // total length
-    printf("ip: tot_len: %d\n", sizeof(struct iphdr) + tcp_len);
     iph -> id = htons(id0); // start ID
     iph -> frag_off = 0x00;
     iph -> ttl = 64; // time to live
@@ -111,10 +110,10 @@ int main(int argc, char *argv[])
     iph -> check = 0;
     inet_pton(AF_INET, srcIP, &(iph -> saddr));
     inet_pton(AF_INET, svrIP, &(iph -> daddr));
-    inet_ntop(AF_INET, &(iph -> saddr), ipstr, INET_ADDRSTRLEN);
-    printf("ip: source: %s\n", ipstr);
-    inet_ntop(AF_INET, &(iph -> daddr), ipstr, INET_ADDRSTRLEN);
-    printf("ip: destination: %s\n", ipstr);
+    // inet_ntop(AF_INET, &(iph -> saddr), ipstr, INET_ADDRSTRLEN);
+    // printf("ip: source: %s\n", ipstr);
+    // inet_ntop(AF_INET, &(iph -> daddr), ipstr, INET_ADDRSTRLEN);
+    // printf("ip: destination: %s\n", ipstr);
 
     // calculate IP check sum
     iph -> check = ip_checksum((void *) datagram, sizeof(struct iphdr) + tcp_len);
