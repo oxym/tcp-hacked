@@ -140,7 +140,7 @@ int main(int argc, char *argv[])
     // construct psudo packet
     memset(pseudo_packet, 0, sizeof pseudo_packet);
     psh = (struct pshdr *) pseudo_packet;
-    cstcph = (struct tcphr *) (psh + 1);
+    cstcph = (struct tcphdr *) (psh + 1);
     memcpy(cstcph, (char *)tcph, tcp_len);
 
     // pack pseudo header
