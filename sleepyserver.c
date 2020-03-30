@@ -118,6 +118,12 @@ int main(void)
 
 	while(1) {  // main accept() loop
 
+        now = time(NULL);
+        strftime(ts, sizeof ts, "%F %H:%M:%S %Z", localtime(&now));
+
+        fprintf(logfile, "%s start sleeping before accept ...\n", ts);
+        sleep(5); // sleep for 5 secs
+
 		sin_size = sizeof their_addr;
 		new_fd = accept(sockfd, (struct sockaddr *)&their_addr, &sin_size);
 
@@ -137,7 +143,7 @@ int main(void)
             now = time(NULL);
             strftime(ts, sizeof ts, "%F %H:%M:%S %Z", localtime(&now));
 
-            fprintf(logfile, "%s start sleeping ...\n", ts);
+            fprintf(logfile, "%s start sleeping before send ...\n", ts);
             sleep(5); // sleep for 5 secs
 
 			if (send(new_fd, "Hello, world!", 13, 0) == -1) 
