@@ -12,7 +12,7 @@
 
 #define DATAGRAMSIZE 1024 // number of bytes for raw datagram
 #define PSEUDOPACKETSIZE 1024 // number of bytes for pseudo packet
-#define PAYLOAD "Hello, I'm Eve!"
+#define PAYLOAD ""
 
 uint16_t ip_checksum(void* vdata,size_t length) {
     // Cast the data pointer to one that can be indexed.
@@ -65,7 +65,8 @@ int main(int argc, char *argv[])
     char *dstIP = "10.0.2.15";
     uint16_t srcPort = 35801;
     uint16_t svrPort = 35801;
-    uint32_t seq0 = 3968001;
+    uint32_t seq0 = 84544002;
+    uint32_t ack0 = 3213134409;
     uint16_t id0 = 56;
     uint16_t window_size = 29200;
     size_t tcp_len;
@@ -122,7 +123,7 @@ int main(int argc, char *argv[])
     tcph -> source = htons(srcPort); // source port
     tcph -> dest = htons(svrPort); // destination port
     tcph -> seq = 0; // sequence number initially set to 0
-    tcph -> ack_seq = 0x0; // ack sequence number
+    tcph -> ack_seq = 0; // ack sequence number
     tcph -> res1 = 0;
     tcph -> res2 = 0;
     tcph -> doff = 5; // 5 * 32-bit tcp header
@@ -154,6 +155,10 @@ int main(int argc, char *argv[])
     {
         tcph -> seq = htonl(seq0++); // set seq number
         cstcph -> seq = htonl(seq0); // set seq number in the checksum header
+        tcph -> ack_seq = htonl(ack0++); // set ack seq number
+        cstcph -> ack_seq = htonl(ack0); // set ack seq number in the checksum header
+        tcph -> check = 0; // reset check sum
+        cstcph -> check = 0; // reset check sum
         tcph -> check = ip_checksum(pseudo_packet, sizeof(struct pshdr) + tcp_len);
         if ((n = sendto(sockfd, datagram, sizeof(struct iphdr) + tcp_len, 0, (struct sockaddr *) &sa, sizeof sa)) < 0)
         {
