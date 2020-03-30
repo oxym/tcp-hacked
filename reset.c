@@ -110,10 +110,10 @@ int main(int argc, char *argv[])
     iph -> check = 0;
     inet_pton(AF_INET, srcIP, &(iph -> saddr));
     inet_pton(AF_INET, dstIP, &(iph -> daddr));
-    // inet_ntop(AF_INET, &(iph -> saddr), ipstr, INET_ADDRSTRLEN);
-    // printf("ip: source: %s\n", ipstr);
-    // inet_ntop(AF_INET, &(iph -> daddr), ipstr, INET_ADDRSTRLEN);
-    // printf("ip: destination: %s\n", ipstr);
+    inet_ntop(AF_INET, &(iph -> saddr), ipstr, INET_ADDRSTRLEN);
+    printf("ip: source: %s\n", ipstr);
+    inet_ntop(AF_INET, &(iph -> daddr), ipstr, INET_ADDRSTRLEN);
+    printf("ip: destination: %s\n", ipstr);
 
     // calculate IP check sum
     iph -> check = ip_checksum((void *) datagram, sizeof(struct iphdr) + tcp_len);
