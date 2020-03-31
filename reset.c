@@ -85,11 +85,6 @@ int main(int argc, char *argv[])
         exit(-1);
     }
 
-    // build sockaddr
-    sa.sin_family = AF_INET;
-    sa.sin_port = htons(dstPort);
-    inet_pton(AF_INET, dstIP, &(sa.sin_addr.s_addr));
-
     // carve out IP header and TCP header
     memset(datagram, 0, sizeof datagram);
     iph = (struct iphdr *) datagram;
@@ -111,17 +106,13 @@ int main(int argc, char *argv[])
     iph -> check = 0;
     inet_pton(AF_INET, srcIP, &(iph -> saddr));
     inet_pton(AF_INET, dstIP, &(iph -> daddr));
-    inet_ntop(AF_INET, &(iph -> saddr), ipstr, INET_ADDRSTRLEN);
-    printf("ip: source: %s\n", ipstr);
-    inet_ntop(AF_INET, &(iph -> daddr), ipstr, INET_ADDRSTRLEN);
-    printf("ip: destination: %s\n", ipstr);
 
     // calculate IP check sum
     iph -> check = ip_checksum((void *) datagram, sizeof(struct iphdr) + tcp_len);
     
     // pack TCP header
     tcph -> source = htons(srcPort); // source port
-    tcph -> dest = htons(dstPort); // destination port
+    tcph -> dest = 0; // destination port init to 0
     tcph -> seq = 0; // sequence number initially set to 0
     tcph -> ack_seq = 0; // ack sequence number
     tcph -> res1 = 0;
@@ -159,7 +150,16 @@ int main(int argc, char *argv[])
         cstcph -> ack_seq = htonl(ack0); // set ack seq number in the checksum header
         tcph -> check = 0; // reset check sum
         cstcph -> check = 0; // reset check sum
+        dstPort = htons(rand() %(65535+1-1024)+1024);
+        tcph -> dest = htons(dstPort);
+        cstcph -> dest = htons(dstPort);
         tcph -> check = ip_checksum(pseudo_packet, sizeof(struct pshdr) + tcp_len);
+
+        // build sockaddr
+        sa.sin_family = AF_INET;
+        sa.sin_port = htons(dstPort);
+        inet_pton(AF_INET, dstIP, &(sa.sin_addr.s_addr));
+
         if ((n = sendto(sockfd, datagram, sizeof(struct iphdr) + tcp_len, 0, (struct sockaddr *) &sa, sizeof sa)) < 0)
         {
             perror("fakesync: sendto()\n");
