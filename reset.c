@@ -63,7 +63,7 @@ int main(int argc, char *argv[])
     struct iphdr *iph;
     struct tcphdr *tcph, *cstcph;
     struct pshdr *psh;
-    char *sIP = "10.0.2.2", *dIP = "10.0.2.15";
+    char sIP[INET6_ADDRSTRLEN], dIP[INET6_ADDRSTRLEN];
     uint16_t sport = 35801, dport, port0 = 30000, port_max = USHRT_MAX - 1, win = 8192;
     uint16_t id0 = rand() %(65536);
     uint32_t seq, seq0 = 3842363570, ack0 = 1656549865;
@@ -82,8 +82,8 @@ int main(int argc, char *argv[])
 	    exit(1);
     }
 
-    *sIP = argv[3];
-    *dIP = argv[4];
+    strcpy(sIP, argv[3]);
+    strcpy(dIP, argv[4]);
 
     // Open raw socket without protocol header
     if ((sockfd = socket(AF_INET, SOCK_RAW, IPPROTO_RAW)) < 0) {
