@@ -69,7 +69,7 @@ int main(int argc, char *argv[])
 
     sleep_time = atoi(argv[1]);
 
-    logfile=fopen("log.txt","w+");
+    logfile=fopen("server.log","w+");
 
 	memset(&hints, 0, sizeof hints);
 	hints.ai_family = AF_UNSPEC;

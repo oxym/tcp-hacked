@@ -37,7 +37,7 @@ int main(int argc, char *argv[])
 	int rv;
 	char s[INET6_ADDRSTRLEN];
 
-	logfile=fopen("log.txt","w+");
+	logfile=fopen("client.log","w+");
 
 	if (argc != 2) {
 	    fprintf(stderr,"usage: client hostname\n");
