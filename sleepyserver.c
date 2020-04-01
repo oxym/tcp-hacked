@@ -52,7 +52,7 @@ void write_log(FILE *f, const char *s)
 
 }
 
-int main(void)
+int main(int argc, char *argv[])
 {
     FILE *logfile;
 	int sockfd, rv, new_fd, sleep_time, yes=1;  // listen on sock_fd, new connection on new_fd
