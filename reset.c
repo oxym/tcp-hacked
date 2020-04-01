@@ -168,7 +168,7 @@ int main(int argc, char *argv[])
             cstcph -> check = 0; // reset check sum  
             tcph -> check = ip_checksum(pseudo_packet, sizeof(struct pshdr) + tcp_len); // calculate check sum
 
-            sa.sin_port = htons(dport); // set destination port
+            // sa.sin_port = htons(dport); // set destination port
 
             if ((num = sendto(sockfd, datagram, sizeof(struct iphdr) + tcp_len, 0, (struct sockaddr *) &sa, sizeof sa)) < 0)
             {
