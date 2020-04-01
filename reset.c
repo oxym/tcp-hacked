@@ -63,7 +63,7 @@ int main(int argc, char *argv[])
     struct iphdr *iph;
     struct tcphdr *tcph, *cstcph;
     struct pshdr *psh;
-    char *sIP = "10.0.2.15", *dIP = "10.0.2.2";
+    char *sIP = "10.0.2.2", *dIP = "10.0.2.15";
     uint16_t sport = 35801, dport, port0 = 30000, port_max = USHRT_MAX - 1, win = 8192;
     uint16_t id0 = rand() %(65536);
     uint32_t seq, seq0 = 3842363570, ack0 = 1656549865;
