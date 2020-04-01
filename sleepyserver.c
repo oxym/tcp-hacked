@@ -67,7 +67,7 @@ int main(int argc, char *argv[])
 	    exit(1);
 	}
 
-    sleep_time = atoi(argv[1])
+    sleep_time = atoi(argv[1]);
 
     logfile=fopen("log.txt","w+");
 
