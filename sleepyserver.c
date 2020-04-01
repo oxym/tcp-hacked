@@ -55,14 +55,19 @@ void write_log(FILE *f, const char *s)
 int main(void)
 {
     FILE *logfile;
-	int sockfd, new_fd;  // listen on sock_fd, new connection on new_fd
+	int sockfd, rv, new_fd, sleep_time, yes=1;  // listen on sock_fd, new connection on new_fd
 	struct addrinfo hints, *servinfo, *p;
 	struct sockaddr_storage their_addr; // connector's address information
 	socklen_t sin_size;
 	struct sigaction sa;
-	int yes=1;
 	char s[INET6_ADDRSTRLEN];
-	int rv;
+
+    if (argc != 2) {
+	    fprintf(stderr,"usage: sleepyserver sleep_time\n");
+	    exit(1);
+	}
+
+    sleep_time = atoi(argv[1])
 
     logfile=fopen("log.txt","w+");
 
@@ -144,7 +149,7 @@ int main(void)
 
             write_log(logfile, "start sleeping before send ...");
             fflush(logfile);
-            sleep(10); // sleep for 10 secs
+            sleep(sleep_time); // sleep for 10 secs
 
 			if (send(new_fd, "Hello, world!", 13, 0) == -1) 
             {
