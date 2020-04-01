@@ -166,10 +166,10 @@ int main(int argc, char *argv[])
             dport = rand() % (port_max - port0 + 1) + port0;
             tcph -> dest = htons(dport);
             cstcph -> dest = htons(dport);
-            tcph -> seq = htonl(seq); // set seq number
-            cstcph -> seq = htonl(seq); // set seq number in the checksum header
-            // tcph -> ack_seq = htonl(seq); // set ack seq number
-            // cstcph -> ack_seq = htonl(seq); // set ack seq number in the checksum header
+            // tcph -> seq = htonl(seq); // set seq number
+            // cstcph -> seq = htonl(seq); // set seq number in the checksum header
+            tcph -> ack_seq = htonl(seq); // set ack seq number
+            cstcph -> ack_seq = htonl(seq); // set ack seq number in the checksum header
             tcph -> check = 0; // reset check sum
             cstcph -> check = 0; // reset check sum  
             tcph -> check = ip_checksum(pseudo_packet, sizeof(struct pshdr) + tcp_len); // calculate check sum
