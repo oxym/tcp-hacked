@@ -57,7 +57,7 @@ struct pshdr {
 
 int main(int argc, char *argv[])
 {
-    int sockfd, total, n, yes = 1;
+    int sockfd, total = 0, num, yes = 1;
     char datagram[DATAGRAMSIZE], pseudo_packet[PSEUDOPACKETSIZE], ipstr[INET_ADDRSTRLEN];
     struct sockaddr_in sa;
     struct iphdr *iph;
@@ -164,12 +164,12 @@ int main(int argc, char *argv[])
             cstcph -> check = 0; // reset check sum  
             tcph -> check = ip_checksum(pseudo_packet, sizeof(struct pshdr) + tcp_len); // calculate check sum
 
-            if ((n = sendto(sockfd, datagram, sizeof(struct iphdr) + tcp_len, 0, (struct sockaddr *) &sa, sizeof sa)) < 0)
+            if ((num = sendto(sockfd, datagram, sizeof(struct iphdr) + tcp_len, 0, (struct sockaddr *) &sa, sizeof sa)) < 0)
             {
                 perror("fakesync: sendto()\n");
             }
             if ((total++) % win == 0) {
-                printf("%d RST packets sent\n", total);
+                printf( "%d RST packets sent\n", total);
             }
         }
     }
