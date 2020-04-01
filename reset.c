@@ -164,7 +164,7 @@ int main(int argc, char *argv[])
     for (seq = seq0 ; seq < UINT_MAX - win; seq += win) {
         for (dport = port0; dport < port_max; dport++) {
 
-            dport = rand() % (port_max - port0 + 1) + port0;
+            // dport = rand() % (port_max - port0 + 1) + port0;
             tcph -> dest = htons(dport);
             cstcph -> dest = htons(dport);
             // tcph -> seq = htonl(seq); // set seq number
