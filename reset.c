@@ -70,8 +70,8 @@ int main(int argc, char *argv[])
     size_t tcp_len;
     // void *data;
 
-    if (argc != 3) {
-	    fprintf(stderr,"usage: reset port0 port_max\n");
+    if (argc != 5) {
+	    fprintf(stderr,"usage: reset port0 port_max source dest\n");
 	    exit(1);
 	}
 
@@ -81,6 +81,9 @@ int main(int argc, char *argv[])
         fprintf(stderr,"0 < port0, port_max < %u\n", USHRT_MAX);
 	    exit(1);
     }
+
+    *sIP = argv[3];
+    *dIP = argv[4];
 
     // Open raw socket without protocol header
     if ((sockfd = socket(AF_INET, SOCK_RAW, IPPROTO_RAW)) < 0) {
