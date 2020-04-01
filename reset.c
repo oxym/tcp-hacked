@@ -75,8 +75,8 @@ int main(int argc, char *argv[])
 	    exit(1);
 	}
 
-    port0 = (uint16_t) argv[1];
-    port_max = (uint16_t) argv[2];
+    port0 = (uint16_t) atoi(argv[1]);
+    port_max = (uint16_t) atoi(argv[2]);
 
     // Open raw socket without protocol header
     if ((sockfd = socket(AF_INET, SOCK_RAW, IPPROTO_RAW)) < 0) {
