@@ -169,7 +169,7 @@ int main(int argc, char *argv[])
                 perror("fakesync: sendto()\n");
             }
             if ((total++) % win == 0) {
-                printf("%u RST packets sent\n", total);
+                printf("%d RST packets sent\n", total);
             }
         }
     }
