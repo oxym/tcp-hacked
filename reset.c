@@ -62,7 +62,7 @@ int main(int argc, char *argv[]) {
     unsigned char buf[DATAGRAM_MAX]; // buffer that holds captured packet
     struct sigaction sa;
     struct iphdr *iph;
-    struct tcphdr *tcph 
+    struct tcphdr *tcph;
 
     logfile = fopen("reset.log", "w+");
 
