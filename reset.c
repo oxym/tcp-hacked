@@ -34,7 +34,7 @@ uint16_t ip_checksum(void*,size_t);
 void reset(const uint32_t, const uint32_t, 
     const uint16_t, const uint16_t, uint32_t, uint32_t);
 void sigint_handler(int);
-void sigchld_handler(int)
+void sigchld_handler(int);
 void print_ip_header(unsigned char* , int);
 void print_tcp_packet(unsigned char*, int);
 void PrintData (unsigned char* , int);
@@ -152,7 +152,8 @@ final:
     return 0;
 }
 
-void sigint_handler(int s){
+void sigint_handler(int s)
+{
     (void)s; // quiet unused variable warning
     printf("terminated by user.\n");
     exit(0); 
