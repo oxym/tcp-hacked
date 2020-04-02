@@ -34,6 +34,7 @@ uint16_t ip_checksum(void*,size_t);
 void reset(const uint32_t, const uint32_t, 
     const uint16_t, const uint16_t, uint32_t, uint32_t);
 void sigint_handler(int );
+void print_tcp_packet(unsigned char*, int)
 
 // Pseudo header needed for calculating the TCP header checksum
 struct pshdr {
@@ -44,6 +45,9 @@ struct pshdr {
   uint16_t tcp_len;
 };
 
+// Global variables
+FILE *logfile;
+
 int main(int argc, char *argv[]) {
     int sockfd, count = 0, num, rv, yes = 1;
     char service_ip[INET6_ADDRSTRLEN];
@@ -53,6 +57,8 @@ int main(int argc, char *argv[]) {
     socklen_t addr_len;
     unsigned char buf[DATAGRAM_MAX]; // buffer that holds captured packet
     struct sigaction sa;
+
+    logfile = fopen("reset.log", "w+");
 
     sa.sa_handler = sigint_handler;
     sigemptyset(&sa.sa_mask);
@@ -109,13 +115,16 @@ int main(int argc, char *argv[]) {
         }
 
         if (iph -> protocol != IPPROTO_TCP) continue; // check if packet is TCP packet
+
+        print_tcp_packet(buf, num); // log the packet
+
         if (iph -> daddr != service_addr) continue; // check if destination IP matches
         if (tcph -> dest != service_port) continue; //check if destination port matches
 
-        reset(iph->saddr, iph->daddr, tcph->source, tcph->dest, tcph->seq, tcph->ack_seq); // reset the server
-        reset(iph->daddr, iph->saddr, tcph->dest, tcph->source, tcph->ack_seq, tcph->seq); // reset the sender
+        // reset(iph->saddr, iph->daddr, tcph->source, tcph->dest, tcph->seq, tcph->ack_seq); // reset the server
+        // reset(iph->daddr, iph->saddr, tcph->dest, tcph->source, tcph->ack_seq, tcph->seq); // reset the sender
 
-        break; // comment to unleash
+        // break; // comment to unleash
     }
     close(sockfd);
     return 0;
@@ -266,4 +275,51 @@ void reset(const uint32_t saddr, const uint32_t daddr,
         }
     }
     close(sockfd);
+}
+
+void print_tcp_packet(unsigned char* Buffer, int Size)
+{
+    unsigned short iphdrlen;
+     
+    struct iphdr *iph = (struct iphdr *)Buffer;
+    iphdrlen = iph->ihl*4;
+     
+    struct tcphdr *tcph=(struct tcphdr*)(Buffer + iphdrlen);
+             
+    fprintf(logfile,"\n\n***********************TCP Packet*************************\n");    
+         
+    print_ip_header(Buffer,Size);
+         
+    fprintf(logfile,"\n");
+    fprintf(logfile,"TCP Header\n");
+    fprintf(logfile,"   |-Source Port      : %u\n",ntohs(tcph->source));
+    fprintf(logfile,"   |-Destination Port : %u\n",ntohs(tcph->dest));
+    fprintf(logfile,"   |-Sequence Number    : %u\n",ntohl(tcph->seq));
+    fprintf(logfile,"   |-Acknowledge Number : %u\n",ntohl(tcph->ack_seq));
+    fprintf(logfile,"   |-Header Length      : %d DWORDS or %d BYTES\n" ,(unsigned int)tcph->doff,(unsigned int)tcph->doff*4);
+    //fprintf(logfile,"   |-CWR Flag : %d\n",(unsigned int)tcph->cwr);
+    //fprintf(logfile,"   |-ECN Flag : %d\n",(unsigned int)tcph->ece);
+    fprintf(logfile,"   |-Urgent Flag          : %d\n",(unsigned int)tcph->urg);
+    fprintf(logfile,"   |-Acknowledgement Flag : %d\n",(unsigned int)tcph->ack);
+    fprintf(logfile,"   |-Push Flag            : %d\n",(unsigned int)tcph->psh);
+    fprintf(logfile,"   |-Reset Flag           : %d\n",(unsigned int)tcph->rst);
+    fprintf(logfile,"   |-Synchronise Flag     : %d\n",(unsigned int)tcph->syn);
+    fprintf(logfile,"   |-Finish Flag          : %d\n",(unsigned int)tcph->fin);
+    fprintf(logfile,"   |-Window         : %d\n",ntohs(tcph->window));
+    fprintf(logfile,"   |-Checksum       : %d\n",ntohs(tcph->check));
+    fprintf(logfile,"   |-Urgent Pointer : %d\n",tcph->urg_ptr);
+    fprintf(logfile,"\n");
+    fprintf(logfile,"                        DATA Dump                         ");
+    fprintf(logfile,"\n");
+         
+    fprintf(logfile,"IP Header\n");
+    PrintData(Buffer,iphdrlen);
+         
+    fprintf(logfile,"TCP Header\n");
+    PrintData(Buffer+iphdrlen,tcph->doff*4);
+         
+    fprintf(logfile,"Data Payload\n");  
+    PrintData(Buffer + iphdrlen + tcph->doff*4 , (Size - tcph->doff*4-iph->ihl*4) );
+                         
+    fprintf(logfile,"\n###########################################################");
 }
