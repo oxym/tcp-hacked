@@ -292,8 +292,7 @@ void send_pshack(const size_t data_size, const int attack_sock, const char *data
     struct tcphdr *tcph = (struct tcphdr *) (iph + 1);
     struct pshdr *psh = (struct pshdr *) pseudo_packet;
     struct tcphdr *cstcph = (struct tcphdr *) (psh + 1);
-
-    fprintf(logfile, "DEBUG preparing PSH ACK from service %u ......\n", ntohs(sport));
+    char ipstr[INET_ADDRSTRLEN];
 
     // dynamic TCP fields
     tcph -> psh = 1;
@@ -325,13 +324,15 @@ void send_pshack(const size_t data_size, const int attack_sock, const char *data
     sa.sin_family = AF_INET;
     sa.sin_addr.s_addr = daddr;
 
-    fprintf(logfile, "DEBUG sending PSH ACK from service %u ......\n", ntohs(sport));
+    inet_ntop(AF_INET, &(saddr), ipstr, INET_ADDRSTRLEN);
+
+    fprintf(logfile, "DEBUG sending PSH ACK from service %s:%u ......\n", ipstr, ntohs(sport));
 
     if ((num = sendto(attack_sock, datagram, sizeof(struct iphdr) + tcp_len, 0, (struct sockaddr *) &sa, sizeof sa)) < 0)
     {
         perror("fakesync: sendto()\n");
     }
-    fprintf(logfile, "DEBUG PSH ACK sent from service %u\n", ntohs(sport));
+    fprintf(logfile, "DEBUG PSH ACK sent from service %s:%u\n", ipstr, ntohs(sport));
 }
 
 void print_ip_header(unsigned char* Buffer, int Size)
