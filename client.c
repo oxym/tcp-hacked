@@ -94,7 +94,7 @@ int main(int argc, char *argv[])
 
 	sleep(second);
 
-	if ((numbytes = send(sockfd, "Hello, world!", 13, 0)) == -1) {
+	if ((numbytes = send(sockfd, "Hello, world!\n", 14, 0)) == -1) {
 	    perror("send");
 	    exit(1);
 	}
