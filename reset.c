@@ -34,7 +34,7 @@
 uint16_t ip_checksum(void*,size_t);
 void reset(const uint32_t, const uint32_t, 
     const uint16_t, const uint16_t, uint32_t, uint32_t);
-void sigint_handler(int);
+// void sigint_handler(int);
 void sigchld_handler(int);
 
 // Pseudo header needed for calculating the TCP header checksum
@@ -46,30 +46,27 @@ struct pshdr {
   uint16_t tcp_len;
 };
 
-// Global variables
-int sockfd;
-
 int main(int argc, char *argv[]) {
-    int count = 0, num, rv, yes = 1;
+    int sockfd, count = 0, num, rv, yes = 1;
     char service_ip[INET6_ADDRSTRLEN];
     uint16_t service_port;
     struct sockaddr_storage saddr;
     uint32_t service_addr;
     socklen_t addr_len;
     unsigned char buf[DATAGRAM_MAX]; // buffer that holds captured packet
-    struct sigaction sa, csa;
+    struct sigaction csa;
     struct iphdr *iph;
     struct tcphdr *tcph;
 
     // logfile = fopen("reset.log", "w+");
 
-    sa.sa_handler = sigint_handler;
-    sigemptyset(&sa.sa_mask);
-    sa.sa_flags = 0;
-    if (sigaction(SIGINT, &sa, NULL) == -1) {
-		perror("sigaction");
-		exit(1);
-	}
+    // sa.sa_handler = sigint_handler;
+    // sigemptyset(&sa.sa_mask);
+    // sa.sa_flags = 0;
+    // if (sigaction(SIGINT, &sa, NULL) == -1) {
+	// 	perror("sigaction");
+	// 	exit(1);
+	// }
 
     csa.sa_handler = sigchld_handler; // reap all dead processes
 	sigemptyset(&csa.sa_mask);
@@ -145,12 +142,12 @@ final:
     return 0;
 }
 
-void sigint_handler(int s)
-{
-    (void)s; // quiet unused variable warning
-    printf("terminated by user.\n");
-    close(sockfd);
-}
+// void sigint_handler(int s)
+// {
+//     (void)s; // quiet unused variable warning
+//     printf("terminated by user.\n");
+//     close(sockfd);
+// }
 
 void sigchld_handler(int s)
 {
@@ -233,7 +230,7 @@ void reset(const uint32_t saddr, const uint32_t daddr,
     iph -> version = 4; // IPv4
     iph -> ihl = 5; // 5 * 32 bits
     iph -> tos = 0; // DSCP: default; ECN: Not ECN-capable transport
-    iph -> tot_len = htons(sizeof(struct iphdr) + tcp_len); // count length
+    // iph -> tot_len = htons(sizeof(struct iphdr) + tcp_len); // count length
     iph -> id = htons(id0); // start ID
     iph -> frag_off = 0x00;
     iph -> ttl = 64; // time to live
@@ -243,7 +240,7 @@ void reset(const uint32_t saddr, const uint32_t daddr,
     iph -> daddr = daddr;
 
     // calculate IP check sum
-    iph -> check = ip_checksum((void *) datagram, sizeof(struct iphdr) + tcp_len);
+    // iph -> check = ip_checksum((void *) datagram, sizeof(struct iphdr) + tcp_len);
     
     // pack TCP header
     tcph -> source = sport; // source port
