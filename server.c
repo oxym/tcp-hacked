@@ -133,7 +133,7 @@ int main(void)
 	    		exit(1);
 			}
 			buf[n] = '\0';
-			printf("server: received '%s'\n",buf);
+			printf("server: received:\n %s",buf);
 
 			close(new_fd);
 			exit(0);
