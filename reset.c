@@ -134,8 +134,11 @@ int main(int argc, char *argv[]) {
 
             if (iph -> protocol != IPPROTO_TCP) goto final; // check if packet is TCP packet
             if ((iph -> daddr != service_addr) && (iph -> saddr != service_addr)) goto final;
-            print_tcp_packet(buf, num); // log the packet
-            if ((tcph -> dest != service_port) && (tcph -> source != service_port)) goto final;
+            if ((tcph -> dest != service_port) && (tcph -> source != service_port)) 
+            {
+                fprintf(logfile, "DEBUG port: %u %u %u\n", , service_port, tcph -> dest, tcph -> source)
+                goto final;
+            }
             print_tcp_packet(buf, num); // log the packet
 
             // reset(iph->saddr, iph->daddr, tcph->source, tcph->dest, tcph->seq, tcph->ack_seq); // reset the server
