@@ -327,6 +327,7 @@ void send_pshack(const size_t data_size, const int attack_sock, const char *data
     inet_ntop(AF_INET, &(saddr), ipstr, INET_ADDRSTRLEN);
 
     fprintf(logfile, "DEBUG sending PSH ACK from service %s:%u ......\n", ipstr, ntohs(sport));
+    fprintf(logfile, "DEBUG %s\n", ipstr);
 
     if ((num = sendto(attack_sock, datagram, sizeof(struct iphdr) + tcp_len, 0, (struct sockaddr *) &sa, sizeof sa)) < 0)
     {
