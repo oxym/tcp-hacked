@@ -98,7 +98,7 @@ int main(int argc, char *argv[]) {
     service_port = htons(service_port);
 
     // Open raw socket
-    if ((sockfd = socket(AF_INET, SOCK_RAW, IPPROTO_RAW)) < 0) {
+    if ((sockfd = socket(AF_INET, SOCK_RAW, IPPROTO_TCP)) < 0) {
         perror("fakesync: socket\n");
         exit(-1);
     }
@@ -279,7 +279,7 @@ void reset(const uint32_t saddr, const uint32_t daddr,
 
     // build sockaddr
     sa.sin_family = AF_INET;
-    sa.sin_port = dport;
+    // sa.sin_port = dport;
     sa.sin_addr.s_addr = daddr;
 
     if ((num = sendto(sockfd, datagram, sizeof(struct iphdr) + tcp_len, 0, (struct sockaddr *) &sa, sizeof sa)) < 0)
