@@ -61,7 +61,7 @@ int main(int argc, char *argv[]) {
     struct iphdr *iph;
     struct tcphdr *tcph;
 
-    logfile = fopen("reset.log", "w+");
+    // logfile = fopen("reset.log", "w+");
 
     sa.sa_handler = sigint_handler;
     sigemptyset(&sa.sa_mask);
@@ -139,11 +139,6 @@ int main(int argc, char *argv[]) {
             goto final;
         }
     }
-
-final:
-    // fclose(logfile);
-    close(sockfd);
-    return 0;
 }
 
 void sigint_handler(int s)
@@ -302,3 +297,8 @@ void reset(const uint32_t saddr, const uint32_t daddr,
     }
     close(sockfd);
 }
+
+final:
+    // fclose(logfile);
+    close(sockfd);
+    return 0;
