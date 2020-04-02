@@ -28,7 +28,7 @@
 #define DATAGRAMSIZE 100 // number of bytes for raw datagram
 #define PSEUDOPACKETSIZE 100 // number of bytes for pseudo packet
 #define DATAGRAM_MAX 65536 // max number of bytes for IP packets
-#define PAYLOAD "Hello, I'm Eve!"
+#define PAYLOAD "Hello, world! I'm Eve!\n"
 
 // Functions
 uint16_t ip_checksum(void*,size_t);
