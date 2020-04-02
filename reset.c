@@ -49,6 +49,8 @@ struct pshdr {
 
 // Global variables
 FILE *logfile;
+int i,j;
+struct sockaddr_in source,dest;
 
 int main(int argc, char *argv[]) {
     int sockfd, count = 0, num, rv, yes = 1;
