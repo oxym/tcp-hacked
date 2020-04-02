@@ -47,10 +47,10 @@ struct pshdr {
 };
 
 // Global variables
-// FILE *logfile;
+int sockfd;
 
 int main(int argc, char *argv[]) {
-    int sockfd, count = 0, num, rv, yes = 1;
+    int count = 0, num, rv, yes = 1;
     char service_ip[INET6_ADDRSTRLEN];
     uint16_t service_port;
     struct sockaddr_storage saddr;
@@ -150,7 +150,6 @@ void sigint_handler(int s)
     (void)s; // quiet unused variable warning
     printf("terminated by user.\n");
     close(sockfd);
-    return 0;
 }
 
 void sigchld_handler(int s)
