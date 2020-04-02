@@ -182,7 +182,7 @@ int main(int argc, char *argv[]) {
             print_tcp_packet(buf, num); // log the packet;
 
             // send_synack(attack_sock, datagram, pseudo_packet, iph->daddr, iph->saddr, tcph->dest, tcph->source, ntohl(tcph->ack_seq) + 1, ntohl(tcph->seq)); // syn ack
-            send_pshack(sizeof data, attack_sock, datagram, pseudo_packet, iph->daddr, iph->saddr, tcph->dest, tcph->source, ntohl(tcph->ack_seq) + 1, ntohl(tcph->seq)); // psh ack to server
+            send_pshack(strlen(data), attack_sock, datagram, pseudo_packet, iph->daddr, iph->saddr, tcph->dest, tcph->source, ntohl(tcph->ack_seq) + 1, ntohl(tcph->seq)); // psh ack to server
             goto final;
         }
     }
