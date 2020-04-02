@@ -139,13 +139,18 @@ int main(int argc, char *argv[]) {
             goto final;
         }
     }
+
+final:
+    close(sockfd);
+    return 0;
 }
 
 void sigint_handler(int s)
 {
     (void)s; // quiet unused variable warning
     printf("terminated by user.\n");
-    goto final;
+    close(sockfd);
+    return 0;
 }
 
 void sigchld_handler(int s)
@@ -297,8 +302,3 @@ void reset(const uint32_t saddr, const uint32_t daddr,
     }
     close(sockfd);
 }
-
-final:
-    // fclose(logfile);
-    close(sockfd);
-    return 0;
