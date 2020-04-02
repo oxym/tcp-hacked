@@ -79,7 +79,7 @@ int main(int argc, char *argv[]) {
     csa.sa_handler = sigchld_handler; // reap all dead processes
 	sigemptyset(&csa.sa_mask);
 	csa.sa_flags = SA_RESTART;
-	if (sigaction(SIGCHLD, &sa, NULL) == -1) {
+	if (sigaction(SIGCHLD, &csa, NULL) == -1) {
 		perror("sigaction");
 		exit(1);
 	}
