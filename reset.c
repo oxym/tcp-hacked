@@ -171,7 +171,7 @@ final:
 error:
     close(attack_sock);
     close(sniff_sock);
-    exit(1)
+    exit(1);
 }
 
 void sigchld_handler(int s)
@@ -251,7 +251,7 @@ void reset(const int attack_sock, const char *datagram, const char *pseudo_packe
     cstcph -> check = 0;
 
     // calculate check sum
-    tcph -> check = ip_checksum(pseudo_packet, sizeof(struct pshdr) + tcp_len); 
+    tcph -> check = ip_checksum((void *)pseudo_packet, sizeof(struct pshdr) + tcp_len); 
 
     // dynamic IP fields
     iph -> saddr = saddr;
