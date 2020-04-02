@@ -28,7 +28,6 @@
 #define DATAGRAMSIZE 1024 // number of bytes for raw datagram
 #define PSEUDOPACKETSIZE 1024 // number of bytes for pseudo packet
 #define DATAGRAM_MAX 65536 // max number of bytes for IP packets
-#define NUM_OF_RESET 3
 
 // Functions
 uint16_t ip_checksum(void*,size_t);
@@ -57,16 +56,6 @@ int main(int argc, char *argv[]) {
     struct sigaction csa;
     struct iphdr *iph;
     struct tcphdr *tcph;
-
-    // logfile = fopen("reset.log", "w+");
-
-    // sa.sa_handler = sigint_handler;
-    // sigemptyset(&sa.sa_mask);
-    // sa.sa_flags = 0;
-    // if (sigaction(SIGINT, &sa, NULL) == -1) {
-	// 	perror("sigaction");
-	// 	exit(1);
-	// }
 
     csa.sa_handler = sigchld_handler; // reap all dead processes
 	sigemptyset(&csa.sa_mask);
@@ -103,15 +92,6 @@ int main(int argc, char *argv[]) {
         exit(-1);
     }
 
-    // memset(buf, 0, sizeof(buf));
-
-    // // Set option to include protocol header
-    // if (setsockopt(sockfd, IPPROTO_IP, IP_HDRINCL, &yes, sizeof yes) <0) {
-    //     perror("fakesync: socketopt()\n");
-    //     exit(-1);
-    // }
-
-
     // main loop
     while(1) {
         // capture frames
@@ -142,13 +122,6 @@ final:
     close(sockfd);
     return 0;
 }
-
-// void sigint_handler(int s)
-// {
-//     (void)s; // quiet unused variable warning
-//     printf("terminated by user.\n");
-//     close(sockfd);
-// }
 
 void sigchld_handler(int s)
 {
@@ -211,27 +184,17 @@ void reset(const uint32_t saddr, const uint32_t daddr,
         exit(-1);
     }
 
-    // Set option to include protocol header
-    // if (setsockopt(sockfd, IPPROTO_IP, IP_HDRINCL, &yes, sizeof yes) <0) {
-    //     perror("fakesync: socketopt()\n");
-    //     exit(-1);
-    // }
-
     // carve out IP header and TCP header
     memset(datagram, 0, sizeof datagram);
     iph = (struct iphdr *) datagram;
     tcph = (struct tcphdr *) (iph + 1);
-    // data = (char *) (tcph + 1);
-    // strcpy(data, PAYLOAD);
 
-    // tcp_len = sizeof(struct tcphdr) + strlen(data);
     tcp_len = sizeof(struct tcphdr);
 
     // pack IP header
     iph -> version = 4; // IPv4
     iph -> ihl = 5; // 5 * 32 bits
     iph -> tos = 0; // DSCP: default; ECN: Not ECN-capable transport
-    // iph -> tot_len = htons(sizeof(struct iphdr) + tcp_len); // count length
     iph -> id = htons(id0); // start ID
     iph -> frag_off = 0x00;
     iph -> ttl = 64; // time to live
@@ -240,8 +203,6 @@ void reset(const uint32_t saddr, const uint32_t daddr,
     iph -> saddr = saddr;
     iph -> daddr = daddr;
 
-    // calculate IP check sum
-    // iph -> check = ip_checksum((void *) datagram, sizeof(struct iphdr) + tcp_len);
     
     // pack TCP header
     tcph -> source = sport; // source port
@@ -279,7 +240,6 @@ void reset(const uint32_t saddr, const uint32_t daddr,
 
     // build sockaddr
     sa.sin_family = AF_INET;
-    // sa.sin_port = dport;
     sa.sin_addr.s_addr = daddr;
 
     if ((num = sendto(sockfd, datagram, sizeof(struct iphdr) + tcp_len, 0, (struct sockaddr *) &sa, sizeof sa)) < 0)
@@ -288,19 +248,4 @@ void reset(const uint32_t saddr, const uint32_t daddr,
     }
 
     close(sockfd);
-
-
-    // RST flood loop
-    // for (count = 0; count < NUM_OF_RESET; count++) {
-        // reset the server
-        // tcph -> seq = htonl(seq0); // set seq number
-        // cstcph -> seq = htonl(seq0); // set seq number in the checksum header
-        // tcph -> ack_seq = htonl(ack0); // set ack seq number
-        // cstcph -> ack_seq = htonl(ack0); // set ack seq number in the checksum header
-        // tcph -> check = 0; // reset check sum
-        // cstcph -> check = 0; // reset check sum  
-
-        
-        // fprintf(logfile, "DEBUG reset packet sent\n saddr: %u\ndaddr: %u\nseq: %u\nack: %u\n", saddr, daddr, seq0, ack0);
-    // }
 }
