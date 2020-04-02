@@ -115,7 +115,7 @@ int main(int argc, char *argv[]) {
     // main loop
     while(1) {
         // capture frames
-        addr_len = sizeof sa;
+        addr_len = sizeof saddr;
         if ((num = recvfrom(sockfd, buf, sizeof buf, 0, (struct sockaddr *)&saddr, &addr_len)) < 0)
         {
             perror("recvfrom()\n");
