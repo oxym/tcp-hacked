@@ -5,6 +5,7 @@
  *   of packets to terminate the communication.
 */
 #include <signal.h>
+#include <sys/wait.h>
 #include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
