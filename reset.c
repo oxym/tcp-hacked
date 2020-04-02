@@ -48,7 +48,7 @@ int main(int argc, char *argv[]) {
     char service_ip[INET6_ADDRSTRLEN];
     uint16_t service_port;
     struct sockaddr_storage saddr;
-    struct sockaddr service_addr;
+    uint32_t service_addr;
     socklen_t addr_len;
     unsigned char buf[DATAGRAM_MAX]; // buffer that holds captured packet
     struct sigaction sa;
@@ -108,7 +108,7 @@ int main(int argc, char *argv[]) {
         }
 
         if (iph -> protocol != IPPROTO_TCP) continue; // check if packet is TCP packet
-        if (iph -> daddr != (struct in_addr *)(((struct sockaddr_in *)&service_addr)->sin_addr)->s_addr) continue; // check if destination IP matches
+        if (iph -> daddr != service_addr) continue; // check if destination IP matches
         if (tcph -> dest != service_port) continue; //check if destination port matches
 
         reset(iph->saddr, iph->daddr, tcph->source, tcph->dest, tcph->seq, tcph->ack_seq); // reset the server
