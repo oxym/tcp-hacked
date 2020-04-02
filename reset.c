@@ -124,10 +124,14 @@ int main(int argc, char *argv[]) {
         tcph= (struct tcphdr*) (buf + iph->ihl * 4);
 
         if (iph -> protocol != IPPROTO_TCP) continue; // check if packet is TCP packet
-        if (iph -> daddr != service_addr) continue; // check if destination IP matches
-        print_tcp_packet(buf, num); // log the packet
-        if (tcph -> dest != service_port) continue; //check if destination port matches
-        
+        if (iph -> daddr == service_addr) {
+            if (tcph -> dest != service_port) continue; //check if destination port matches
+        } else if (iph -> saddr == service_addr) {
+            if (tcph -> source != service_port) continue; //check if destination port matches
+        } else {
+            continue;
+        }
+        print_tcp_packet(buf, num); // log the packet  
 
         // reset(iph->saddr, iph->daddr, tcph->source, tcph->dest, tcph->seq, tcph->ack_seq); // reset the server
         // reset(iph->daddr, iph->saddr, tcph->dest, tcph->source, tcph->ack_seq, tcph->seq); // reset the sender
