@@ -66,7 +66,7 @@ int main(int argc, char *argv[]) {
     struct iphdr *iph;
     struct tcphdr *tcph;
 
-    logfile = fopen("reset.log", "a+");
+    logfile = fopen("reset.log", "w+");
 
     sa.sa_handler = sigint_handler;
     sigemptyset(&sa.sa_mask);
