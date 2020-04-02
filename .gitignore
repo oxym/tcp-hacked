@@ -53,4 +53,5 @@ dkms.conf
 .vs/
 .vscode
 
-fakesync_*
+reference.c
+sniffer.c
