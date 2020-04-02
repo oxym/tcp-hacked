@@ -134,6 +134,7 @@ int main(int argc, char *argv[]) {
 
             if (iph -> protocol != IPPROTO_TCP) goto final; // check if packet is TCP packet
             if ((iph -> daddr != service_addr) && (iph -> saddr != service_addr)) goto final;
+            print_tcp_packet(buf, num); // log the packet
             if ((tcph -> dest != service_port) && (tcph -> source != service_port)) goto final;
             print_tcp_packet(buf, num); // log the packet
 
