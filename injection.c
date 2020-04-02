@@ -188,7 +188,7 @@ int main(int argc, char *argv[]) {
             tcph -> source = new_tcph->dest; // source port
             cstcph -> source = new_tcph->dest;
             seq = htonl(ntohl(new_tcph->ack_seq) + 1);
-            tcph -> seq = seq; // sequence number
+            tcph -> seq = seq;
             cstcph -> seq = seq;
             tcph -> ack_seq = new_tcph->seq; // ack sequence number
             cstcph -> ack_seq = new_tcph->seq;
