@@ -138,7 +138,7 @@ int main(int argc, char *argv[]) {
     }
 
 final:
-    close(logfile);
+    fclose(logfile);
     close(sockfd);
     return 0;
 }
