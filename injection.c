@@ -271,38 +271,38 @@ uint16_t ip_checksum(void* vdata,size_t length) {
     return htons(~acc);
 }
 
-void send_pshack(const size_t data_size, const int attack_sock, const char *datagram, const char *pseudo_packet, const uint32_t saddr, const uint32_t daddr, 
-    const uint16_t sport, const uint16_t dport, uint32_t seq0, uint32_t ack0)
-{
+// void send_pshack(const size_t data_size, const int attack_sock, const char *datagram, const char *pseudo_packet, const uint32_t saddr, const uint32_t daddr, 
+//     const uint16_t sport, const uint16_t dport, uint32_t seq0, uint32_t ack0)
+// {
 
-    // dynamic TCP fields
-    tcph -> source = sport; // source port
-    cstcph -> source = sport;
-    tcph -> seq = htonl(seq0); // sequence number
-    cstcph -> seq = htonl(seq0);
-    tcph -> ack_seq = htonl(ack0); // ack sequence number
-    cstcph -> ack_seq = htonl(ack0);
+//     // dynamic TCP fields
+//     tcph -> source = sport; // source port
+//     cstcph -> source = sport;
+//     tcph -> seq = htonl(seq0); // sequence number
+//     cstcph -> seq = htonl(seq0);
+//     tcph -> ack_seq = htonl(ack0); // ack sequence number
+//     cstcph -> ack_seq = htonl(ack0);
 
-    // dynamic pseudo fields
-    psh -> src_addr = saddr;
+//     // dynamic pseudo fields
+//     psh -> src_addr = saddr;
 
-    // calculate check sum
-    tcph -> check = ip_checksum((void *)pseudo_packet, sizeof(struct pshdr) + tcp_len); 
+//     // calculate check sum
+//     tcph -> check = ip_checksum((void *)pseudo_packet, sizeof(struct pshdr) + tcp_len); 
 
-    // dynamic IP fields
-    iph -> saddr = saddr;
+//     // dynamic IP fields
+//     iph -> saddr = saddr;
 
-    inet_ntop(AF_INET, &(daddr), ipstr, INET_ADDRSTRLEN);
+//     inet_ntop(AF_INET, &(daddr), ipstr, INET_ADDRSTRLEN);
 
-    // fprintf(logfile, "DEBUG sending PSH ACK to service %s:%u ......\n", ipstr, ntohs(dport));
-    // fprintf(logfile, "DEBUG %s\n", ipstr);
+//     // fprintf(logfile, "DEBUG sending PSH ACK to service %s:%u ......\n", ipstr, ntohs(dport));
+//     // fprintf(logfile, "DEBUG %s\n", ipstr);
 
-    if ((num = sendto(attack_sock, datagram, sizeof(struct iphdr) + tcp_len, 0, (struct sockaddr *) &sa, sizeof sa)) < 0)
-    {
-        perror("fakesync: sendto()\n");
-    }
-    // fprintf(logfile, "DEBUG PSH ACK sent to service %s:%u\n", ipstr, ntohs(dport));
-}
+//     if ((num = sendto(attack_sock, datagram, sizeof(struct iphdr) + tcp_len, 0, (struct sockaddr *) &sa, sizeof sa)) < 0)
+//     {
+//         perror("fakesync: sendto()\n");
+//     }
+//     // fprintf(logfile, "DEBUG PSH ACK sent to service %s:%u\n", ipstr, ntohs(dport));
+// }
 
 void print_ip_header(unsigned char* Buffer, int Size)
 {
