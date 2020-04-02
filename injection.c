@@ -148,7 +148,7 @@ int main(int argc, char *argv[]) {
     psh -> tcp_len = htons(tcp_len); // TCP segment length
 
     // Open sniff socket
-    if ((sniff_sock = socket(AF_INET, SOCK_RAW, IPPROTO_TCP)) < 0) {
+    if ((sniff_sock = socket(AF_PACKET, SOCK_RAW, IPPROTO_TCP)) < 0) {
         perror("fakesync: socket\n");
         goto error;
     }
