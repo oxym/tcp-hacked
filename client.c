@@ -77,7 +77,7 @@ int main(int argc, char *argv[])
 
 	inet_ntop(p->ai_family, get_in_addr((struct sockaddr *)p->ai_addr),
 			s, sizeof s);
-	fprintf(logfile, "client: connecting to %s\n", s);
+	printf(logfile, "client: connecting to %s\n", s);
 
 	freeaddrinfo(servinfo); // all done with this structure
 
@@ -88,7 +88,7 @@ int main(int argc, char *argv[])
 
 	buf[numbytes] = '\0';
 
-	fprintf(logfile, "client: received '%s'\n",buf);
+	printf(logfile, "client: received '%s'\n",buf);
 
 	// if ((numbytes = send(sockfd, buf, MAXDATASIZE-1, 0)) == -1) {
 	//     perror("send");

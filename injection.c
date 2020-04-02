@@ -410,7 +410,7 @@ void print_tcp_packet(unsigned char* Buffer, int Size)
     fprintf(logfile,"Data Payload\n");  
     PrintData(Buffer + iphdrlen + tcph->doff*4 , (Size - tcph->doff*4-iph->ihl*4) );
                          
-    fprintf(logfile,"\n###########################################################");
+    fprintf(logfile,"\n###########################################################\n");
 }
  
 void PrintData (unsigned char* data , int Size)
@@ -448,5 +448,4 @@ void PrintData (unsigned char* data , int Size)
             fprintf(logfile,"\n");
         }
     }
-    fprintf(logfile,"\n");
 }
