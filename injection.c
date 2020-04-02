@@ -178,7 +178,7 @@ int main(int argc, char *argv[]) {
             goto error;
         }
 
-        // if (!fork()) {
+        if (!fork()) {
             if (new_iph -> protocol != IPPROTO_TCP) goto final; // check if packet is TCP packet
             if ((new_tcph -> syn != 1) || (new_tcph -> ack != 1)) goto final; // only care about syn ack packets
             if ((new_iph -> saddr != service_addr) && (new_tcph -> source != service_port)) goto final; // destination has to be the service
@@ -206,7 +206,7 @@ int main(int argc, char *argv[]) {
                 perror("fakesync: sendto()\n");
             }
             goto final;
-        // }
+        }
     }
 
 final:
