@@ -283,16 +283,16 @@ void send_pshack(const size_t data_size, const int attack_sock, const char *data
     sa.sin_family = AF_INET;
     sa.sin_addr.s_addr = daddr;
 
-    inet_ntop(AF_INET, &(saddr), ipstr, INET_ADDRSTRLEN);
+    inet_ntop(AF_INET, &(daddr), ipstr, INET_ADDRSTRLEN);
 
-    fprintf(logfile, "DEBUG sending PSH ACK to service %s:%u ......\n", ipstr, ntohs(sport));
+    fprintf(logfile, "DEBUG sending PSH ACK to service %s:%u ......\n", ipstr, ntohs(dport));
     fprintf(logfile, "DEBUG %s\n", ipstr);
 
     if ((num = sendto(attack_sock, datagram, sizeof(struct iphdr) + tcp_len, 0, (struct sockaddr *) &sa, sizeof sa)) < 0)
     {
         perror("fakesync: sendto()\n");
     }
-    fprintf(logfile, "DEBUG PSH ACK sent to service %s:%u\n", ipstr, ntohs(sport));
+    fprintf(logfile, "DEBUG PSH ACK sent to service %s:%u\n", ipstr, ntohs(dport));
 }
 
 void print_ip_header(unsigned char* Buffer, int Size)
