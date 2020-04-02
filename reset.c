@@ -54,7 +54,7 @@ int main(int argc, char *argv[]) {
     struct sigaction sa;
 
     sa.sa_handler = sigint_handler;
-    sigemptyset(&sigIntHandler.sa_mask);
+    sigemptyset(&sa.sa_mask);
     sa.sa_flags = 0;
     if (sigaction(SIGINT, &sa, NULL) == -1) {
 		perror("sigaction");
