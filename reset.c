@@ -61,6 +61,8 @@ int main(int argc, char *argv[]) {
     socklen_t addr_len;
     unsigned char buf[DATAGRAM_MAX]; // buffer that holds captured packet
     struct sigaction sa;
+    struct iphdr *iph;
+    struct tcphdr *tcph 
 
     logfile = fopen("reset.log", "w+");
 
@@ -97,9 +99,7 @@ int main(int argc, char *argv[]) {
         exit(-1);
     }
 
-    memset(buf, 0, sizeof(buf));
-    struct iphdr *iph = (struct iphdr*)buf;
-    struct tcphdr *tcph = (struct tcphdr *) (iph + 1);
+    // memset(buf, 0, sizeof(buf));
 
     // // Set option to include protocol header
     // if (setsockopt(sockfd, IPPROTO_IP, IP_HDRINCL, &yes, sizeof yes) <0) {
@@ -117,6 +117,11 @@ int main(int argc, char *argv[]) {
             perror("recvfrom()\n");
             exit(1);
         }
+
+        unsigned short iphdrlen;
+     
+        iph = (struct iphdr *) buf;
+        tcph= (struct tcphdr*) (buf + iph->ihl * 4);
 
         if (iph -> protocol != IPPROTO_TCP) continue; // check if packet is TCP packet
         if (iph -> daddr != service_addr) continue; // check if destination IP matches
