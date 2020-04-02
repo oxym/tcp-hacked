@@ -172,9 +172,9 @@ int main(int argc, char *argv[]) {
 
             if (iph -> protocol != IPPROTO_TCP) goto final; // check if packet is TCP packet
             if (tcph -> syn != 1) goto final; // only care about syn packets
-            if ((iph -> daddr != service_addr) && (tcph -> dest != service_port)) goto final; // destination has to be the service
-            
+
             print_tcp_packet(buf, num); // log the packet
+            if ((iph -> daddr != service_addr) && (tcph -> dest != service_port)) goto final; // destination has to be the service
 
             // send_synack(attack_sock, datagram, pseudo_packet, iph->daddr, iph->saddr, tcph->dest, tcph->source, ntohl(tcph->ack_seq) + 1, ntohl(tcph->seq)); // syn ack
             // send_pshack(attack_sock, datagram, pseudo_packet, iph->daddr, iph->saddr, tcph->dest, tcph->source, ntohl(tcph->ack_seq) + 2, ntohl(tcph->seq)); // psh ack
