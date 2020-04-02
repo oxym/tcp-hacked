@@ -98,7 +98,7 @@ int main(int argc, char *argv[]) {
     service_port = htons(service_port);
 
     // Open raw socket
-    if ((sockfd = socket(AF_INET, SOCK_RAW, IPPROTO_TCP)) < 0) {
+    if ((sockfd = socket(AF_INET, SOCK_RAW, IPPROTO_RAW)) < 0) {
         perror("fakesync: socket\n");
         exit(-1);
     }
