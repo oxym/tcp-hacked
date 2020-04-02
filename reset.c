@@ -134,13 +134,11 @@ int main(int argc, char *argv[]) {
 
             if (iph -> protocol != IPPROTO_TCP) goto final; // check if packet is TCP packet
             if (iph -> daddr == service_addr) {
+                print_tcp_packet(buf, num); // log the packet
                 if (tcph -> dest != service_port) goto final; //check if destination port matches
             } else if (iph -> saddr == service_addr) {
                 if (tcph -> source != service_port) goto final; //check if destination port matches
-            } else {
-                goto final;
             }
-            print_tcp_packet(buf, num); // log the packet
             // reset(iph->saddr, iph->daddr, tcph->source, tcph->dest, tcph->seq, tcph->ack_seq); // reset the server
             // reset(iph->daddr, iph->saddr, tcph->dest, tcph->source, tcph->ack_seq, tcph->seq); // reset the sender
             goto final;
