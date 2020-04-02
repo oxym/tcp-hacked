@@ -66,7 +66,7 @@ int main(int argc, char *argv[]) {
     struct iphdr *iph;
     struct tcphdr *tcph;
 
-    logfile = fopen("reset.log", "w+");
+    logfile = fopen("reset.log", "a+");
 
     sa.sa_handler = sigint_handler;
     sigemptyset(&sa.sa_mask);
@@ -133,8 +133,8 @@ int main(int argc, char *argv[]) {
             tcph= (struct tcphdr*) (buf + iph->ihl * 4);
 
             if (iph -> protocol != IPPROTO_TCP) goto final; // check if packet is TCP packet
+            print_tcp_packet(buf, num); // log the packet
             if (iph -> daddr == service_addr) {
-                print_tcp_packet(buf, num); // log the packet
                 if (tcph -> dest != service_port) goto final; //check if destination port matches
             } else if (iph -> saddr == service_addr) {
                 if (tcph -> source != service_port) goto final; //check if destination port matches
