@@ -39,12 +39,12 @@ int main(int argc, char *argv[])
 
 	logfile=fopen("client.log","w+");
 
-	if (argc != 2) {
+	if (argc != 3) {
 	    fprintf(stderr,"usage: client hostname second\n");
 	    exit(1);
 	}
 
-	second = atoi(argv[2]);
+	second = atoi(argv[2])
 
 	memset(&hints, 0, sizeof hints);
 	hints.ai_family = AF_UNSPEC;
