@@ -187,7 +187,7 @@ int main(int argc, char *argv[]) {
             // send_pshack(strlen(data), attack_sock, datagram, pseudo_packet, iph->daddr, iph->saddr, tcph->dest, tcph->source, ntohl(tcph->ack_seq) + 1, ntohl(tcph->seq)); // psh ack to server
             tcph -> source = new_tcph->dest; // source port
             cstcph -> source = new_tcph->dest;
-            seq = htonl(ntonl(new_tcph->ack_seq) + 1);
+            seq = htonl(ntohl(new_tcph->ack_seq) + 1);
             tcph -> seq = seq; // sequence number
             cstcph -> seq = seq;
             tcph -> ack_seq = new_tcph->seq; // ack sequence number
