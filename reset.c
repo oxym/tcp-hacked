@@ -129,6 +129,7 @@ int main(int argc, char *argv[]) {
             if (iph -> protocol != IPPROTO_TCP) goto final; // check if packet is TCP packet
             if ((iph -> daddr != service_addr) && (iph -> saddr != service_addr)) goto final;
             if ((tcph -> dest != service_port) && (tcph -> source != service_port)) goto final;
+            if (tcph -> rst == 1) goto final; // ignore reset packets
             // print_tcp_packet(buf, num); // log the packet
 
             reset(iph->saddr, iph->daddr, tcph->source, tcph->dest, ntohl(tcph->seq), ntohl(tcph->ack_seq)); // reset the receiver
