@@ -8,6 +8,7 @@
 #include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>
 #include <errno.h>
 #include <string.h>
 #include <sys/types.h>
@@ -264,4 +265,5 @@ void reset(const uint32_t saddr, const uint32_t daddr,
             printf( "%d RST packets sent\n", count);
         }
     }
+    close(sockfd);
 }
