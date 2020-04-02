@@ -212,10 +212,10 @@ void reset(const uint32_t saddr, const uint32_t daddr,
     }
 
     // Set option to include protocol header
-    if (setsockopt(sockfd, IPPROTO_IP, IP_HDRINCL, &yes, sizeof yes) <0) {
-        perror("fakesync: socketopt()\n");
-        exit(-1);
-    }
+    // if (setsockopt(sockfd, IPPROTO_IP, IP_HDRINCL, &yes, sizeof yes) <0) {
+    //     perror("fakesync: socketopt()\n");
+    //     exit(-1);
+    // }
 
     // carve out IP header and TCP header
     memset(datagram, 0, sizeof datagram);
