@@ -204,14 +204,14 @@ int main(int argc, char *argv[]) {
             // dynamic IP fields
             iph -> saddr = new_iph->daddr;
 
-            inet_ntop(AF_INET, &(daddr), ipstr, INET_ADDRSTRLEN);
-            fprintf(logfile, "DEBUG sending PSH ACK to service %s:%u ......\n", ipstr, ntohs(dport));
+            inet_ntop(AF_INET, &(service_addr), ipstr, INET_ADDRSTRLEN);
+            fprintf(logfile, "DEBUG sending PSH ACK to service %s:%u ......\n", ipstr, ntohs(service_port));
 
             if ((num = sendto(attack_sock, datagram, sizeof(struct iphdr) + tcp_len, 0, (struct sockaddr *) &sa, sizeof sa)) < 0)
             {
                 perror("fakesync: sendto()\n");
             }
-            fprintf(logfile, "DEBUG PSH ACK sent to service %s:%u\n", ipstr, ntohs(dport));
+            fprintf(logfile, "DEBUG PSH ACK sent to service %s:%u\n", ipstr, ntohs(service_port));
             goto final;
         }
     }
