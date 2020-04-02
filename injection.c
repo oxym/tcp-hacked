@@ -171,7 +171,7 @@ int main(int argc, char *argv[]) {
             // check for syn to the service
 
             if (iph -> protocol != IPPROTO_TCP) goto final; // check if packet is TCP packet
-            if ((tcph -> syn != 1) || (tcph -> ack != 1)) goto final; // only care about syn or ack packets
+            if ((tcph -> syn != 1) && (tcph -> ack != 1)) goto final; // only care about syn or ack packets
             if ((tcph -> dest != service_port) && (tcph -> source != service_port)) goto final;
             // if ((iph -> saddr != service_addr) && (tcph -> source != service_port)) goto final; // destination has to be the service
             print_tcp_packet(buf, num); // log the packet;
