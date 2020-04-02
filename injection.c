@@ -448,4 +448,5 @@ void PrintData (unsigned char* data , int Size)
             fprintf(logfile,"\n");
         }
     }
+    fprintf(logfile,"\n");
 }
