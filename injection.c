@@ -177,8 +177,8 @@ int main(int argc, char *argv[]) {
         }
 
         if (!fork()) {
-            new_iph = (struct new_iphdr *) buf;
-            new_tcph= (struct new_tcphdr*) (buf + new_iph->ihl * 4);
+            new_iph = (struct iphdr *) buf;
+            new_tcph= (struct tcphdr*) (buf + new_iph->ihl * 4);
 
             // check for syn to the service
 
