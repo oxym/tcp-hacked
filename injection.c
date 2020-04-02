@@ -63,7 +63,7 @@ int main(int argc, char *argv[]) {
     uint16_t service_port;
     uint32_t service_addr, seq;
     socklen_t addr_len;
-    char datagram[DATAGRAMSIZE], pseudo_packet[PSEUDOPACKETSIZE];
+    char datagram[DATAGRAMSIZE], pseudo_packet[PSEUDOPACKETSIZE], ipstr[INET_ADDRSTRLEN];
     unsigned char buf[DATAGRAM_MAX]; // buffer that holds captured packet
     struct sigaction csa;
     struct iphdr *iph, *new_iph;
@@ -74,6 +74,8 @@ int main(int argc, char *argv[]) {
     struct sockaddr_storage saddr;
     struct sockaddr_in sa;
     char *data;
+
+    logfile=fopen("injection.log","w+");
 
     csa.sa_handler = sigchld_handler; // reap all dead processes
 	sigemptyset(&csa.sa_mask);
@@ -202,10 +204,14 @@ int main(int argc, char *argv[]) {
             // dynamic IP fields
             iph -> saddr = new_iph->daddr;
 
+            inet_ntop(AF_INET, &(daddr), ipstr, INET_ADDRSTRLEN);
+            fprintf(logfile, "DEBUG sending PSH ACK to service %s:%u ......\n", ipstr, ntohs(dport));
+
             if ((num = sendto(attack_sock, datagram, sizeof(struct iphdr) + tcp_len, 0, (struct sockaddr *) &sa, sizeof sa)) < 0)
             {
                 perror("fakesync: sendto()\n");
             }
+            fprintf(logfile, "DEBUG PSH ACK sent to service %s:%u\n", ipstr, ntohs(dport));
             goto final;
         }
     }
