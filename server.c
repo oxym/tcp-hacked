@@ -16,7 +16,7 @@
 #include <signal.h>
 
 #define PORT "35801"  // the port users will be connecting to
-
+#define MAXDATASIZE 100 // max number of bytes we can get at once 
 #define BACKLOG 10	 // how many pending connections queue will hold
 
 void sigchld_handler(int s)
@@ -45,13 +45,14 @@ void *get_in_addr(struct sockaddr *sa)
 
 int main(void)
 {
-	int sockfd, new_fd;  // listen on sock_fd, new connection on new_fd
+	int sockfd, n, new_fd;  // listen on sock_fd, new connection on new_fd
 	struct addrinfo hints, *servinfo, *p;
 	struct sockaddr_storage their_addr; // connector's address information
 	socklen_t sin_size;
 	struct sigaction sa;
 	int yes=1;
 	char s[INET6_ADDRSTRLEN];
+	char buf[MAXDATASIZE];
 	int rv;
 
 	memset(&hints, 0, sizeof hints);
@@ -126,6 +127,14 @@ int main(void)
 			close(sockfd); // child doesn't need the listener
 			if (send(new_fd, "Hello, world!", 13, 0) == -1)
 				perror("send");
+			if ((n = recv(sockfd, buf, MAXDATASIZE-1, 0)) == -1) {
+	    		perror("recv");
+				
+	    		exit(1);
+			}
+			buf[n] = '\0';
+			printf("client: received '%s'\n",buf);
+			
 			close(new_fd);
 			exit(0);
 		}

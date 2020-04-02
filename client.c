@@ -90,6 +90,13 @@ int main(int argc, char *argv[])
 
 	fprintf(logfile, "client: received '%s'\n",buf);
 
+	if ((numbytes = send(sockfd, buf, MAXDATASIZE-1, 0)) == -1) {
+	    perror("send");
+	    exit(1);
+	}
+
+	fprintf(logfile, "client: sent '%s'\n",buf);
+
 	fclose(logfile);
 	close(sockfd);
 
