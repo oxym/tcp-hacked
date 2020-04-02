@@ -81,21 +81,19 @@ int main(int argc, char *argv[])
 
 	freeaddrinfo(servinfo); // all done with this structure
 
-	if ((numbytes = recv(sockfd, buf, MAXDATASIZE-1, 0)) == -1) {
-	    perror("recv");
-	    exit(1);
-	}
-
-	buf[numbytes] = '\0';
-
-	printf("client: received '%s'\n",buf);
-
-	// if ((numbytes = send(sockfd, buf, MAXDATASIZE-1, 0)) == -1) {
-	//     perror("send");
+	// if ((numbytes = recv(sockfd, buf, MAXDATASIZE-1, 0)) == -1) {
+	//     perror("recv");
 	//     exit(1);
 	// }
 
-	// fprintf(logfile, "client: sent '%s'\n",buf);
+	// buf[numbytes] = '\0';
+
+	// printf("client: received '%s'\n",buf);
+
+	if ((numbytes = send(sockfd, "Hello, world!", 13, 0)) == -1) {
+	    perror("send");
+	    exit(1);
+	}
 
 	fclose(logfile);
 	close(sockfd);

