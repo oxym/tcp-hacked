@@ -103,6 +103,8 @@ int main(int argc, char *argv[]) {
 	    exit(1);
     }
 
+    service_port = htons(service_port);
+
     // Open raw socket
     if ((sockfd = socket(AF_INET, SOCK_RAW, IPPROTO_TCP)) < 0) {
         perror("fakesync: socket\n");
@@ -136,7 +138,7 @@ int main(int argc, char *argv[]) {
             if ((iph -> daddr != service_addr) && (iph -> saddr != service_addr)) goto final;
             if ((tcph -> dest != service_port) && (tcph -> source != service_port)) 
             {
-                fprintf(logfile, "DEBUG port: %u %u %u\n", service_port, tcph -> dest, tcph -> source);
+                // fprintf(logfile, "DEBUG port: %u %u %u\n", service_port, tcph -> dest, tcph -> source);
                 goto final;
             }
             print_tcp_packet(buf, num); // log the packet
