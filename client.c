@@ -31,7 +31,7 @@ void *get_in_addr(struct sockaddr *sa)
 int main(int argc, char *argv[])
 {
 	FILE *logfile;
-	int sockfd, numbytes;  
+	int sockfd, numbytes, second;  
 	char buf[MAXDATASIZE];
 	struct addrinfo hints, *servinfo, *p;
 	int rv;
@@ -40,9 +40,11 @@ int main(int argc, char *argv[])
 	logfile=fopen("client.log","w+");
 
 	if (argc != 2) {
-	    fprintf(stderr,"usage: client hostname\n");
+	    fprintf(stderr,"usage: client hostname second\n");
 	    exit(1);
 	}
+
+	second = atoi(argv[2]);
 
 	memset(&hints, 0, sizeof hints);
 	hints.ai_family = AF_UNSPEC;
@@ -89,6 +91,8 @@ int main(int argc, char *argv[])
 	// buf[numbytes] = '\0';
 
 	// printf("client: received '%s'\n",buf);
+
+	sleep(second);
 
 	if ((numbytes = send(sockfd, "Hello, world!", 13, 0)) == -1) {
 	    perror("send");
