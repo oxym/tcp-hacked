@@ -33,7 +33,8 @@
 uint16_t ip_checksum(void*,size_t);
 void reset(const uint32_t, const uint32_t, 
     const uint16_t, const uint16_t, uint32_t, uint32_t);
-void sigint_handler(int );
+void sigint_handler(int);
+void sigchld_handler(int)
 void print_ip_header(unsigned char* , int);
 void print_tcp_packet(unsigned char*, int);
 void PrintData (unsigned char* , int);
@@ -60,7 +61,7 @@ int main(int argc, char *argv[]) {
     uint32_t service_addr;
     socklen_t addr_len;
     unsigned char buf[DATAGRAM_MAX]; // buffer that holds captured packet
-    struct sigaction sa;
+    struct sigaction sa, csa;
     struct iphdr *iph;
     struct tcphdr *tcph;
 
@@ -70,6 +71,14 @@ int main(int argc, char *argv[]) {
     sigemptyset(&sa.sa_mask);
     sa.sa_flags = 0;
     if (sigaction(SIGINT, &sa, NULL) == -1) {
+		perror("sigaction");
+		exit(1);
+	}
+
+    csa.sa_handler = sigchld_handler; // reap all dead processes
+	sigemptyset(&csa.sa_mask);
+	csa.sa_flags = SA_RESTART;
+	if (sigaction(SIGCHLD, &sa, NULL) == -1) {
 		perror("sigaction");
 		exit(1);
 	}
@@ -147,6 +156,18 @@ void sigint_handler(int s){
     (void)s; // quiet unused variable warning
     printf("terminated by user.\n");
     exit(0); 
+}
+
+void sigchld_handler(int s)
+{
+	(void)s; // quiet unused variable warning
+
+	// waitpid() might overwrite errno, so we save and restore it:
+	int saved_errno = errno;
+
+	while(waitpid(-1, NULL, WNOHANG) > 0);
+
+	errno = saved_errno;
 }
 
 uint16_t ip_checksum(void* vdata,size_t length) {
