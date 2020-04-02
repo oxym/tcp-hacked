@@ -44,7 +44,7 @@ int main(int argc, char *argv[])
 	    exit(1);
 	}
 
-	second = atoi(argv[2])
+	second = atoi(argv[2]);
 
 	memset(&hints, 0, sizeof hints);
 	hints.ai_family = AF_UNSPEC;
