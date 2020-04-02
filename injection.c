@@ -34,7 +34,7 @@
 uint16_t ip_checksum(void*,size_t);
 void send_synack(const int, const char *, const char *, const uint32_t, const uint32_t, 
     const uint16_t, const uint16_t, uint32_t, uint32_t);
-void send_pshack(const int, const char *, const char *, const uint32_t, const uint32_t, 
+void send_pshack(const size_t, const int, const char *, const char *, const uint32_t, const uint32_t, 
     const uint16_t, const uint16_t, uint32_t, uint32_t);
 void print_ip_header(unsigned char* , int);
 void print_tcp_packet(unsigned char* , int);
@@ -176,7 +176,7 @@ int main(int argc, char *argv[]) {
             print_tcp_packet(buf, num); // log the packet
 
             // send_synack(attack_sock, datagram, pseudo_packet, iph->daddr, iph->saddr, tcph->dest, tcph->source, ntohl(tcph->ack_seq) + 1, ntohl(tcph->seq)); // syn ack
-            send_pshack(attack_sock, datagram, pseudo_packet, iph->daddr, iph->saddr, tcph->dest, tcph->source, ntohl(tcph->seq) + 1, ntohl(tcph->ack_seq)); // psh ack
+            send_pshack(sizeof data, attack_sock, datagram, pseudo_packet, iph->daddr, iph->saddr, tcph->dest, tcph->source, ntohl(tcph->seq) + 1, ntohl(tcph->ack_seq)); // psh ack
             goto final;
         }
     }
@@ -282,17 +282,19 @@ uint16_t ip_checksum(void* vdata,size_t length) {
 //     }
 // }
 
-void send_pshack(const int attack_sock, const char *datagram, const char *pseudo_packet, const uint32_t saddr, const uint32_t daddr, 
+void send_pshack(const size_t data_size, const int attack_sock, const char *datagram, const char *pseudo_packet, const uint32_t saddr, const uint32_t daddr, 
     const uint16_t sport, const uint16_t dport, uint32_t seq0, uint32_t ack0)
 {
     int num;
     struct sockaddr_in sa;
 
-    size_t tcp_len = sizeof(struct tcphdr);
+    size_t tcp_len = sizeof(struct tcphdr) + data_size;
     struct iphdr *iph = (struct iphdr *) datagram;
     struct tcphdr *tcph = (struct tcphdr *) (iph + 1);
     struct pshdr *psh = (struct pshdr *) pseudo_packet;
     struct tcphdr *cstcph = (struct tcphdr *) (psh + 1);
+
+    fprintf(logfile, "DEBUG preparing PSH ACK from service %u ......\n", ntohs(sport));
 
     // dynamic TCP fields
     tcph -> psh = 1;
