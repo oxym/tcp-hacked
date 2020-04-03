@@ -52,6 +52,3 @@ Mkfile.old
 dkms.conf
 .vs/
 .vscode
-
-reference.c
-sniffer.c
