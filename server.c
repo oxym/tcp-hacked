@@ -125,15 +125,15 @@ int main(void)
 
 		if (!fork()) { // this is the child process
 			close(sockfd); // child doesn't need the listener
-			// if (send(new_fd, "Hello, world!", 13, 0) == -1)
-			// 	perror("send");
-			if ((n = recv(new_fd, buf, MAXDATASIZE-1, 0)) == -1) {
-	    		perror("recv");
+			if (send(new_fd, "Hello, world!", 13, 0) == -1)
+				perror("send");
+			// if ((n = recv(new_fd, buf, MAXDATASIZE-1, 0)) == -1) {
+	    	// 	perror("recv");
 				
-	    		exit(1);
-			}
-			buf[n] = '\0';
-			printf("server: received:\n %s\n",buf);
+	    	// 	exit(1);
+			// }
+			// buf[n] = '\0';
+			// printf("server: received:\n %s\n",buf);
 
 			close(new_fd);
 			exit(0);
